@@ -52,6 +52,10 @@ public interface DataPlaneStatements extends StatefulEntityStatements, LeaseStat
         return "flow_type";
     }
 
+    default String getTransferTypeDestinationColumn() {
+        return "transfer_type_destination";
+    }
+
     String getInsertTemplate();
 
     String getUpdateTemplate();

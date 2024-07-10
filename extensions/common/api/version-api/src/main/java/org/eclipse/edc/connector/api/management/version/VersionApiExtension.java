@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.connector.api.management.version;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import org.eclipse.edc.connector.api.management.version.v1.VersionApiController;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
@@ -31,6 +32,7 @@ import org.eclipse.edc.web.spi.configuration.WebServiceConfigurer;
 import org.eclipse.edc.web.spi.configuration.WebServiceSettings;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 
 @Extension(value = VersionApiExtension.NAME)
 public class VersionApiExtension implements ServiceExtension {
@@ -50,7 +52,7 @@ public class VersionApiExtension implements ServiceExtension {
             .name(WEB_SERVICE_NAME)
             .build();
 
-    private static final String API_VERSION_JSON_FILE = "version.json";
+    private static final String API_VERSION_JSON_FILE = "version-api-version.json";
     @Inject
     private WebService webService;
 
@@ -83,8 +85,10 @@ public class VersionApiExtension implements ServiceExtension {
             if (versionContent == null) {
                 throw new EdcException("Version file not found or not readable.");
             }
-            var content = typeManager.getMapper().readValue(versionContent, VersionRecord.class);
-            apiVersionService.addRecord(ApiContext.VERSION, content);
+            Stream.of(typeManager.getMapper()
+                            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+                            .readValue(versionContent, VersionRecord[].class))
+                    .forEach(vr -> apiVersionService.addRecord(ApiContext.VERSION, vr));
         } catch (IOException e) {
             throw new EdcException(e);
         }

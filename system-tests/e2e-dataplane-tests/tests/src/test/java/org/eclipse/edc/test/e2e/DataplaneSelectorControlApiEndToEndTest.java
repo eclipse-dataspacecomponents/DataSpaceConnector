@@ -60,7 +60,9 @@ public class DataplaneSelectorControlApiEndToEndTest {
                     "web.http.path", "/api",
                     "web.http.control.port", String.valueOf(getFreePort()),
                     "web.http.control.path", "/control",
-                    "edc.dpf.selector.url", String.format("http://localhost:%d/control/v1/dataplanes", controlPlaneControlPort)
+                    "edc.dpf.selector.url", String.format("http://localhost:%d/control/v1/dataplanes", controlPlaneControlPort),
+                    "edc.transfer.proxy.token.verifier.publickey.alias", "alias",
+                    "edc.transfer.proxy.token.signer.privatekey.alias", "alias"
             ),
             ":system-tests:e2e-dataplane-tests:runtimes:data-plane",
             ":extensions:data-plane:data-plane-self-registration",

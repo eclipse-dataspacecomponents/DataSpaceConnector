@@ -20,6 +20,7 @@ import org.eclipse.edc.jsonld.spi.transformer.AbstractJsonLdTransformer;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,6 +38,7 @@ import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_PROPERTIES;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_SOURCE_DATA_ADDRESS;
+import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION;
 
 /**
  * Converts from a {@link JsonObject} in JSON-LD expanded form to a {@link DataFlowStartMessage}.
@@ -50,7 +52,22 @@ public class JsonObjectToDataFlowStartMessageTransformer extends AbstractJsonLdT
     @Override
     public @Nullable DataFlowStartMessage transform(@NotNull JsonObject object, @NotNull TransformerContext context) {
         var builder = Builder.newInstance();
+
+        var transferTypeDestination = object.get(EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION);
+        var flowType = object.get(EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE);
+        if (transferTypeDestination != null && flowType != null) {
+            builder.transferType(new TransferType(
+                    transformString(transferTypeDestination, context),
+                    FlowType.valueOf(transformString(flowType, context))
+            ));
+        } else {
+            context.problem().missingProperty().property("%s - %s".formatted(EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION, EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE))
+                    .report();
+            return null;
+        }
+
         visitProperties(object, (s, jsonValue) -> transformProperties(s, jsonValue, builder, context));
+
         return builder.build();
     }
 
@@ -67,15 +84,10 @@ public class JsonObjectToDataFlowStartMessageTransformer extends AbstractJsonLdT
             }
             case EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID ->
                     builder.participantId(transformString(jsonValue, context));
-            case EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE ->
-                    builder.flowType(FlowType.valueOf(transformString(jsonValue, context)));
-
             case EDC_DATA_FLOW_START_MESSAGE_DESTINATION_DATA_ADDRESS ->
                     builder.destinationDataAddress(transformObject(jsonValue, DataAddress.class, context));
-
             case EDC_DATA_FLOW_START_MESSAGE_SOURCE_DATA_ADDRESS ->
                     builder.sourceDataAddress(transformObject(jsonValue, DataAddress.class, context));
-
             default -> builder.property(key, transformString(jsonValue, context));
         }
     }

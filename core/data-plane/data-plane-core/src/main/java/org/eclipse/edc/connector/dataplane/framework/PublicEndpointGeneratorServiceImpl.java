@@ -20,8 +20,6 @@ import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -30,14 +28,14 @@ class PublicEndpointGeneratorServiceImpl implements PublicEndpointGeneratorServi
     private final Map<String, Function<DataAddress, Endpoint>> generatorFunctions = new ConcurrentHashMap<>();
 
     @Override
-    public Result<Endpoint> generateFor(DataAddress sourceDataAddress) {
-        Objects.requireNonNull(sourceDataAddress);
-        Objects.requireNonNull(sourceDataAddress.getType());
+    public Result<Endpoint> generateFor(String destinationType, DataAddress sourceDataAddress) {
+        var function = generatorFunctions.get(destinationType);
+        if (function == null) {
+            return Result.failure("No Endpoint generator function registered for transfer type destination '%s'".formatted(destinationType));
+        }
 
-        return Optional.ofNullable(generatorFunctions.get(sourceDataAddress.getType()))
-                .map(function -> function.apply(sourceDataAddress))
-                .map(Result::success)
-                .orElseGet(() -> Result.failure("No Endpoint generator function registered for source data type '%s'".formatted(sourceDataAddress.getType())));
+        var endpoint = function.apply(sourceDataAddress);
+        return Result.success(endpoint);
     }
 
     @Override

@@ -40,7 +40,9 @@ public record DataPlaneInstanceSchema(
         @Schema(requiredMode = REQUIRED)
         Set<String> allowedDestTypes,
         Integer turnCount,
-        Long lastActive) {
+        Long lastActive,
+        String state,
+        Long stateTimestamp) {
     public static final String DATAPLANE_INSTANCE_EXAMPLE = """
             {
                 "@context": {
@@ -53,7 +55,9 @@ public record DataPlaneInstanceSchema(
                     "source-type2"
                 ],
                 "allowedDestTypes": ["your-dest-type"],
-                "allowedTransferTypes": ["transfer-type"]
+                "allowedTransferTypes": ["transfer-type"],
+                "state": "AVAILABLE",
+                "stateTimestamp": 1688465655
             }
             """;
 }

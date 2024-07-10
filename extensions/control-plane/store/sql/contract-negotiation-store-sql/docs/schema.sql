@@ -80,3 +80,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS contract_negotiation_id_uindex
 
 CREATE UNIQUE INDEX IF NOT EXISTS contract_agreement_id_uindex
     ON edc_contract_agreement (agr_id);
+
+
+-- This will help to identify states that need to be transitioned without a table scan when the entries grow
+CREATE INDEX IF NOT EXISTS contract_negotiation_state ON edc_contract_negotiation (state,state_timestamp);

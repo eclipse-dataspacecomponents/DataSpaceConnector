@@ -29,6 +29,12 @@ public class StreamFailure extends Failure {
         this.reason = reason;
     }
 
+    @Override
+    public String getFailureDetail() {
+        var str = super.getFailureDetail();
+        return (str != null && !str.isEmpty()) ? (reason + ": " + str) : (reason + "");
+    }
+
     public Reason getReason() {
         return reason;
     }

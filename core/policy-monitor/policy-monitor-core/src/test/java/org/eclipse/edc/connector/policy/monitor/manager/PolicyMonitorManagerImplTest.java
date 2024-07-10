@@ -149,6 +149,8 @@ class PolicyMonitorManagerImplTest {
                 .state(STARTED.code())
                 .build();
         var policy = Policy.Builder.newInstance().build();
+
+        var stateTimestamp = entry.getStateTimestamp();
         when(store.nextNotLeased(anyInt(), stateIs(STARTED.code()))).thenReturn(List.of(entry)).thenReturn(emptyList());
         when(transferProcessService.findById(entry.getId()))
                 .thenReturn(TransferProcess.Builder.newInstance().state(TransferProcessStates.STARTED.code()).build());
@@ -159,7 +161,7 @@ class PolicyMonitorManagerImplTest {
 
         await().untilAsserted(() -> {
             verify(transferProcessService, never()).terminate(any());
-            verify(store).save(argThat(it -> it.getState() == STARTED.code()));
+            verify(store).save(argThat(it -> it.getState() == STARTED.code() && stateTimestamp < it.getStateTimestamp()));
         });
     }
 

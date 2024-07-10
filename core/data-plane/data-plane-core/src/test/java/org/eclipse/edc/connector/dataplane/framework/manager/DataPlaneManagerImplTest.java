@@ -30,6 +30,7 @@ import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowResponseMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,7 @@ import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 import static org.eclipse.edc.spi.persistence.StateEntityStore.hasState;
 import static org.eclipse.edc.spi.response.ResponseStatus.ERROR_RETRY;
 import static org.eclipse.edc.spi.response.ResponseStatus.FATAL_ERROR;
+import static org.eclipse.edc.spi.result.StoreFailure.Reason.GENERAL_ERROR;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -189,7 +191,7 @@ class DataPlaneManagerImplTest {
 
     @Test
     void terminate_shouldTerminatePullDataFlow() {
-        var dataFlow = dataFlowBuilder().state(RECEIVED.code()).id("dataFlowId").flowType(FlowType.PULL).build();
+        var dataFlow = dataFlowBuilder().state(RECEIVED.code()).id("dataFlowId").transferType(new TransferType("DestinationType", FlowType.PULL)).build();
         when(store.findByIdAndLease(dataFlow.getId())).thenReturn(StoreResult.success(dataFlow));
         when(authorizationService.revokeEndpointDataReference(dataFlow.getId(), null)).thenReturn(Result.success());
 
@@ -202,7 +204,7 @@ class DataPlaneManagerImplTest {
 
     @Test
     void terminate_shouldFailToTerminatePullDataFlow_whenRevocationFails() {
-        var dataFlow = dataFlowBuilder().state(RECEIVED.code()).id("dataFlowId").flowType(FlowType.PULL).build();
+        var dataFlow = dataFlowBuilder().state(RECEIVED.code()).id("dataFlowId").transferType(new TransferType("DestinationType", FlowType.PULL)).build();
         when(store.findByIdAndLease(dataFlow.getId())).thenReturn(StoreResult.success(dataFlow));
         when(authorizationService.revokeEndpointDataReference(dataFlow.getId(), null)).thenReturn(Result.failure("failure"));
 
@@ -373,7 +375,7 @@ class DataPlaneManagerImplTest {
 
             await().untilAsserted(() -> {
                 verify(transferService).transfer(isA(DataFlowStartMessage.class));
-                verify(store, atLeastOnce()).save(argThat(it -> it.getState() == FAILED.code() && it.getErrorDetail().equals("an error")));
+                verify(store, atLeastOnce()).save(argThat(it -> it.getState() == FAILED.code() && it.getErrorDetail().equals(GENERAL_ERROR + ": an error")));
             });
         }
 
@@ -475,7 +477,7 @@ class DataPlaneManagerImplTest {
                 .source(DataAddress.Builder.newInstance().type("source").build())
                 .destination(DataAddress.Builder.newInstance().type("destination").build())
                 .callbackAddress(URI.create("http://any"))
-                .flowType(FlowType.PUSH)
+                .transferType(new TransferType("DestinationType", FlowType.PUSH))
                 .properties(Map.of("key", "value"));
     }
 

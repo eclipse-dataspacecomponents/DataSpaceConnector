@@ -25,12 +25,14 @@ import org.eclipse.edc.web.spi.WebServer;
 @ExtensionPoint
 public interface WebServiceConfigurer {
 
+    String WEB_HTTP_PREFIX = "web.http";
+
     /**
      * Build the configuration for an API
      *
-     * @param config The context configuration
+     * @param config    The context configuration
      * @param webServer The WebServer
-     * @param settings WebService settings
+     * @param settings  WebService settings
      * @return The final webservice configuration
      */
     WebServiceConfiguration configure(Config config, WebServer webServer, WebServiceSettings settings);

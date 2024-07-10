@@ -22,6 +22,7 @@ import org.eclipse.edc.connector.controlplane.policy.spi.event.PolicyDefinitionU
 import org.eclipse.edc.connector.controlplane.services.spi.policydefinition.PolicyDefinitionService;
 import org.eclipse.edc.connector.dataplane.selector.spi.client.DataPlaneClientFactory;
 import org.eclipse.edc.connector.dataplane.selector.spi.store.DataPlaneInstanceStore;
+import org.eclipse.edc.junit.annotations.ComponentTest;
 import org.eclipse.edc.junit.extensions.EdcExtension;
 import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.spi.event.EventRouter;
@@ -41,6 +42,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+@ComponentTest
 @ExtendWith(EdcExtension.class)
 public class PolicyDefinitionEventDispatchTest {
 

@@ -18,10 +18,14 @@ import org.eclipse.edc.api.auth.spi.registry.ApiAuthenticationRegistry;
 import org.eclipse.edc.junit.extensions.DependencyInjectionExtension;
 import org.eclipse.edc.spi.security.Vault;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.spi.system.configuration.Config;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.eclipse.edc.api.auth.token.TokenBasedAuthenticationExtension.AUTH_API_KEY;
+import static org.eclipse.edc.api.auth.token.TokenBasedAuthenticationExtension.AUTH_API_KEY_ALIAS;
+import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.eq;
@@ -29,6 +33,7 @@ import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(DependencyInjectionExtension.class)
@@ -83,4 +88,31 @@ public class TokenBasedAuthenticationExtensionTest {
         verify(apiAuthenticationRegistry).register(eq("management-api"), isA(TokenBasedAuthenticationService.class));
     }
 
+    @Test
+    public void tokenBasedProvider(TokenBasedAuthenticationExtension extension) {
+        var config = mock(Config.class);
+        when(config.getString(AUTH_API_KEY)).thenReturn("key");
+
+        assertThat(extension.tokenBasedProvider(config))
+                .isSucceeded().isInstanceOf(TokenBasedAuthenticationService.class);
+
+        verifyNoMoreInteractions(vault);
+
+    }
+
+    @Test
+    public void tokenBasedProvider_withAlias(TokenBasedAuthenticationExtension extension) {
+
+        var config = mock(Config.class);
+
+        when(config.getString(AUTH_API_KEY_ALIAS, null)).thenReturn("alias");
+        when(vault.resolveSecret("alias")).thenReturn("key");
+
+        assertThat(extension.tokenBasedProvider(config))
+                .isSucceeded().isInstanceOf(TokenBasedAuthenticationService.class);
+
+        verify(vault).resolveSecret("alias");
+
+
+    }
 }

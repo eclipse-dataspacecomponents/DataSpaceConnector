@@ -14,24 +14,20 @@
 
 package org.eclipse.edc.connector.dataplane.util.sink;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.DataSource;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.InputStreamDataSource;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamFailure;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult;
-import org.eclipse.edc.spi.monitor.Monitor;
-import org.eclipse.edc.spi.telemetry.Telemetry;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
-import static java.lang.String.format;
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -39,40 +35,33 @@ import static org.mockito.Mockito.when;
 
 class ParallelSinkTest {
 
-    private final Monitor monitor = mock(Monitor.class);
-    private final ExecutorService executor = Executors.newFixedThreadPool(2);
-    private final String dataSourceName = "test-datasource-name";
-    private final String dataSourceContent = "test-content";
+    private final Duration timeout = Duration.of(500, MILLIS);
     private final String errorMessage = "test-errormessage";
-    private final InputStreamDataSource dataSource = new InputStreamDataSource(
-            dataSourceName,
-            new ByteArrayInputStream(dataSourceContent.getBytes()));
     private final String dataFlowRequestId = randomUUID().toString();
-    FakeParallelSink fakeSink;
-
-    @BeforeEach
-    void setup() {
-        fakeSink = new FakeParallelSink();
-        fakeSink.monitor = monitor;
-        fakeSink.telemetry = new Telemetry(); // default noop implementation
-        fakeSink.executorService = executor;
-        fakeSink.requestId = dataFlowRequestId;
-    }
+    private final FakeParallelSink fakeSink = new FakeParallelSink.Builder().monitor(mock())
+            .executorService(Executors.newFixedThreadPool(2))
+            .requestId(dataFlowRequestId).build();
 
     @Test
     void transfer_succeeds() {
-        assertThat(fakeSink.transfer(dataSource)).succeedsWithin(500, TimeUnit.MILLISECONDS)
-                .satisfies(transferResult -> assertThat(transferResult.succeeded()).isTrue());
+        var dataSource = dataSource();
 
-        Assertions.assertThat(fakeSink.parts).containsExactly(dataSource);
+        var future = fakeSink.transfer(dataSource);
+        
+        assertThat(future).succeedsWithin(timeout)
+                .satisfies(transferResult -> assertThat(transferResult.succeeded()).isTrue());
+        assertThat(fakeSink.parts).containsExactly(dataSource);
         assertThat(fakeSink.complete).isEqualTo(1);
     }
 
     @Test
     void transfer_whenCompleteFails_fails() {
+        var dataSource = dataSource();
         fakeSink.completeResponse = StreamResult.error("General error");
-        assertThat(fakeSink.transfer(dataSource)).succeedsWithin(500, TimeUnit.MILLISECONDS)
-                .isEqualTo(fakeSink.completeResponse);
+
+        var future = fakeSink.transfer(dataSource);
+        
+        assertThat(future).succeedsWithin(timeout).isEqualTo(fakeSink.completeResponse);
     }
 
     @Test
@@ -81,17 +70,23 @@ class ParallelSinkTest {
 
         when(dataSourceMock.openPartStream()).thenThrow(new RuntimeException(errorMessage));
 
-        assertThat(fakeSink.transfer(dataSourceMock)).succeedsWithin(500, TimeUnit.MILLISECONDS)
+        var future = fakeSink.transfer(dataSourceMock);
+        
+        assertThat(future).succeedsWithin(timeout)
                 .satisfies(transferResult -> assertThat(transferResult.failed()).isTrue())
-                .satisfies(transferResult -> assertThat(transferResult.getFailureMessages()).containsExactly(format("Error processing data transfer request - Request ID: %s", dataFlowRequestId)));
+                .satisfies(transferResult -> assertThat(transferResult.getFailureDetail())
+                        .contains("Error processing data transfer request").contains(dataFlowRequestId).contains(errorMessage));
         assertThat(fakeSink.complete).isEqualTo(0);
     }
 
     @Test
     void transfer_whenFailureDuringTransfer_fails() {
+        var dataSource = dataSource();
         fakeSink.transferResultSupplier = () -> StreamResult.error(errorMessage);
 
-        assertThat(fakeSink.transfer(dataSource)).succeedsWithin(500, TimeUnit.MILLISECONDS)
+        var future = fakeSink.transfer(dataSource);
+        
+        assertThat(future).succeedsWithin(timeout)
                 .satisfies(transferResult -> assertThat(transferResult.failed()).isTrue())
                 .satisfies(transferResult -> assertThat(transferResult.getFailure().getReason()).isEqualTo(StreamFailure.Reason.GENERAL_ERROR))
                 .satisfies(transferResult -> assertThat(transferResult.getFailureMessages()).containsExactly(errorMessage));
@@ -102,18 +97,38 @@ class ParallelSinkTest {
 
     @Test
     void transfer_whenExceptionDuringTransfer_fails() {
+        var dataSource = dataSource();
         fakeSink.transferResultSupplier = () -> {
             throw new RuntimeException(errorMessage);
         };
 
-        assertThat(fakeSink.transfer(dataSource)).succeedsWithin(500, TimeUnit.MILLISECONDS)
+        var future = fakeSink.transfer(dataSource);
+        
+        assertThat(future).succeedsWithin(timeout)
                 .satisfies(transferResult -> assertThat(transferResult.failed()).isTrue())
                 .satisfies(transferResult -> assertThat(transferResult.getFailure().getReason()).isEqualTo(StreamFailure.Reason.GENERAL_ERROR))
-                .satisfies(transferResult -> assertThat(transferResult.getFailureMessages())
-                        .containsExactly("Unhandled exception raised when transferring data: java.lang.RuntimeException: " + errorMessage));
+                .satisfies(transferResult -> assertThat(transferResult.getFailureDetail())
+                        .contains("Error processing data transfer request").contains(dataFlowRequestId).contains(errorMessage));
 
         assertThat(fakeSink.parts).containsExactly(dataSource);
         assertThat(fakeSink.complete).isEqualTo(0);
+    }
+
+    @Test
+    void shouldNotBlock_whenDataSourceIsIndefinite() {
+        var infiniteStream = IntStream.iterate(0, i -> i + 1).mapToObj(i -> mock(DataSource.Part.class));
+        var dataSource = mock(DataSource.class);
+        when(dataSource.openPartStream()).thenReturn(StreamResult.success(infiniteStream));
+
+        var future = fakeSink.transfer(dataSource);
+
+        assertThat(future).isNotNull();
+    }
+
+    private InputStreamDataSource dataSource() {
+        return new InputStreamDataSource(
+                "test-datasource-name",
+                new ByteArrayInputStream("test-content".getBytes()));
     }
 
     private static class FakeParallelSink extends ParallelSink {
@@ -133,6 +148,18 @@ class ParallelSinkTest {
         protected StreamResult<Object> complete() {
             complete++;
             return completeResponse;
+        }
+
+        public static class Builder extends ParallelSink.Builder<Builder, FakeParallelSink> {
+
+            protected Builder() {
+                super(new FakeParallelSink());
+            }
+
+            @Override
+            protected void validate() {
+
+            }
         }
     }
 }

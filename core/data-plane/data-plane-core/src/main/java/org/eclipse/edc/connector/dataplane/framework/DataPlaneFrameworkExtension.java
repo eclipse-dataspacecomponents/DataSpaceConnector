@@ -52,46 +52,61 @@ import static org.eclipse.edc.statemachine.AbstractStateEntityManager.DEFAULT_SE
 /**
  * Provides core services for the Data Plane Framework.
  */
-@Provides({ DataPlaneManager.class, DataTransferExecutorServiceContainer.class, TransferServiceRegistry.class })
+@Provides({ DataPlaneManager.class, TransferServiceRegistry.class })
 @Extension(value = DataPlaneFrameworkExtension.NAME)
 public class DataPlaneFrameworkExtension implements ServiceExtension {
-    public static final String NAME = "Data Plane Framework";
 
-    @Setting(value = "the iteration wait time in milliseconds in the data plane state machine. Default value " + DEFAULT_ITERATION_WAIT, type = "long")
+    public static final String NAME = "Data Plane Framework";
+    private static final int DEFAULT_TRANSFER_THREADS = 20;
+
+    @Setting(
+            value = "the iteration wait time in milliseconds in the data plane state machine.",
+            defaultValue = DEFAULT_ITERATION_WAIT + "",
+            type = "long")
     private static final String DATAPLANE_MACHINE_ITERATION_WAIT_MILLIS = "edc.dataplane.state-machine.iteration-wait-millis";
 
-    @Setting(value = "the batch size in the data plane state machine. Default value " + DEFAULT_BATCH_SIZE, type = "int")
+    @Setting(
+            value = "the batch size in the data plane state machine.",
+            defaultValue = DEFAULT_BATCH_SIZE + "",
+            type = "int"
+    )
     private static final String DATAPLANE_MACHINE_BATCH_SIZE = "edc.dataplane.state-machine.batch-size";
 
-    @Setting(value = "how many times a specific operation must be tried before terminating the dataplane with error", type = "int", defaultValue = DEFAULT_SEND_RETRY_LIMIT + "")
+    @Setting(
+            value = "how many times a specific operation must be tried before terminating the dataplane with error",
+            defaultValue = DEFAULT_SEND_RETRY_LIMIT + "",
+            type = "int"
+    )
     private static final String DATAPLANE_SEND_RETRY_LIMIT = "edc.dataplane.send.retry.limit";
 
-    @Setting(value = "The base delay for the dataplane retry mechanism in millisecond", type = "long", defaultValue = DEFAULT_SEND_RETRY_BASE_DELAY + "")
+    @Setting(
+            value = "The base delay for the dataplane retry mechanism in millisecond",
+            defaultValue = DEFAULT_SEND_RETRY_BASE_DELAY + "",
+            type = "long"
+    )
     private static final String DATAPLANE_SEND_RETRY_BASE_DELAY_MS = "edc.dataplane.send.retry.base-delay.ms";
 
-    @Setting
+    @Setting(
+            value = "Size of the transfer thread pool. It is advisable to set it bigger than the state machine batch size",
+            defaultValue = DEFAULT_TRANSFER_THREADS + "",
+            type = "int"
+    )
     private static final String TRANSFER_THREADS = "edc.dataplane.transfer.threads";
-    private static final int DEFAULT_TRANSFER_THREADS = 10;
+
     private DataPlaneManagerImpl dataPlaneManager;
 
     @Inject
     private TransferServiceSelectionStrategy transferServiceSelectionStrategy;
-
     @Inject
     private DataPlaneStore store;
-
     @Inject
     private TransferProcessApiClient transferProcessApiClient;
-
     @Inject
     private ExecutorInstrumentation executorInstrumentation;
-
     @Inject
     private Telemetry telemetry;
-
     @Inject
     private Clock clock;
-
     @Inject
     private PipelineService pipelineService;
     @Inject
@@ -112,12 +127,6 @@ public class DataPlaneFrameworkExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
 
-        var numThreads = context.getSetting(TRANSFER_THREADS, DEFAULT_TRANSFER_THREADS);
-        var executorService = Executors.newFixedThreadPool(numThreads);
-        var executorContainer = new DataTransferExecutorServiceContainer(
-                executorInstrumentation.instrument(executorService, "Data plane transfers"));
-        context.registerService(DataTransferExecutorServiceContainer.class, executorContainer);
-
         var transferServiceRegistry = new TransferServiceRegistryImpl(transferServiceSelectionStrategy);
         transferServiceRegistry.registerTransferService(pipelineService);
         context.registerService(TransferServiceRegistry.class, transferServiceRegistry);
@@ -131,6 +140,7 @@ public class DataPlaneFrameworkExtension implements ServiceExtension {
                 .clock(clock)
                 .entityRetryProcessConfiguration(getEntityRetryProcessConfiguration(context))
                 .executorInstrumentation(executorInstrumentation)
+                .authorizationService(authorizationService)
                 .transferServiceRegistry(transferServiceRegistry)
                 .store(store)
                 .transferProcessClient(transferProcessApiClient)
@@ -152,6 +162,14 @@ public class DataPlaneFrameworkExtension implements ServiceExtension {
         if (dataPlaneManager != null) {
             dataPlaneManager.stop();
         }
+    }
+
+    @Provider
+    public DataTransferExecutorServiceContainer dataTransferExecutorServiceContainer(ServiceExtensionContext context) {
+        var numThreads = context.getSetting(TRANSFER_THREADS, DEFAULT_TRANSFER_THREADS);
+        var executorService = Executors.newFixedThreadPool(numThreads);
+        return new DataTransferExecutorServiceContainer(
+                executorInstrumentation.instrument(executorService, "Data plane transfers"));
     }
 
     @Provider

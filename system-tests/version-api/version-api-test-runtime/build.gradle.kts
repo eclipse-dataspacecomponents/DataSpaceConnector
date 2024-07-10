@@ -30,8 +30,8 @@ dependencies {
     implementation(project(":extensions:common:api:api-observability"))
     implementation(project(":extensions:data-plane:data-plane-client"))
     implementation(project(":extensions:common:iam:identity-trust:identity-trust-sts:identity-trust-sts-api"))
-
     implementation(project(":core:data-plane-selector:data-plane-selector-core"))
+    implementation(project(":extensions:common:api:control-api-configuration"))
 }
 
 edcBuild {

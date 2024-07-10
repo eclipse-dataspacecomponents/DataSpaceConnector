@@ -18,6 +18,7 @@ import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DataService;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DataServiceRegistry;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowManager;
+import org.eclipse.edc.dataaddress.httpdata.spi.HttpDataAddressSchema;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,30 @@ class DefaultDistributionResolverTest {
                 .anySatisfy(distribution -> {
                     assertThat(distribution.getFormat()).isEqualTo("type2");
                     assertThat(distribution.getDataService()).isSameAs(dataService);
+                });
+    }
+
+    @Test
+    void shouldReturnDistribution_whenAssetIsCatalog() {
+        when(dataServiceRegistry.getDataServices()).thenReturn(List.of(dataService));
+        when(dataFlowManager.transferTypesFor(any())).thenReturn(Set.of("type1", "type2"));
+
+        var dataAddress = DataAddress.Builder.newInstance()
+                .type("HttpData")
+                .property(HttpDataAddressSchema.BASE_URL, "http://quizzqua.zz/buzz")
+                .build();
+        var asset = Asset.Builder.newInstance()
+                .dataAddress(dataAddress)
+                .property(Asset.PROPERTY_IS_CATALOG, true)
+                .description("test description")
+                .build();
+
+        var distributions = resolver.getDistributions(asset);
+
+        assertThat(distributions).hasSize(1)
+                .anySatisfy(distribution -> {
+                    assertThat(distribution.getFormat()).isEqualTo("HttpData");
+                    assertThat(distribution.getDataService().getId()).isNotNull();
                 });
     }
 }

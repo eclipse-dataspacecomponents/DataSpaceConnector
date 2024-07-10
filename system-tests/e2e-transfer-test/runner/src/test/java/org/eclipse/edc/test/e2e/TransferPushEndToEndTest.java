@@ -14,94 +14,107 @@
 
 package org.eclipse.edc.test.e2e;
 
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.junit.annotations.EndToEndTest;
 import org.eclipse.edc.junit.annotations.PostgresqlIntegrationTest;
 import org.eclipse.edc.junit.extensions.RuntimeExtension;
 import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
-import org.jetbrains.annotations.NotNull;
+import org.eclipse.edc.spi.security.Vault;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockserver.integration.ClientAndServer;
+import org.mockserver.model.BinaryBody;
+import org.mockserver.model.HttpRequest;
+import org.mockserver.model.HttpResponse;
 
 import java.util.Map;
 import java.util.UUID;
 
-import static io.restassured.RestAssured.given;
 import static jakarta.json.Json.createObjectBuilder;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.noConstraintPolicy;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.COMPLETED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.sql.testfixtures.PostgresqlEndToEndInstance.createDatabase;
-import static org.eclipse.edc.test.e2e.Runtimes.backendService;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.eclipse.edc.util.io.Ports.getFreePort;
+import static org.mockserver.integration.ClientAndServer.startClientAndServer;
+import static org.mockserver.model.JsonBody.json;
+import static org.mockserver.stop.Stop.stopQuietly;
 
 
 class TransferPushEndToEndTest {
 
     abstract static class Tests extends TransferEndToEndTestBase {
 
+        private static ClientAndServer providerDataSource;
+        private static ClientAndServer consumerDataDestination;
+
+        @BeforeAll
+        static void setUp() {
+            providerDataSource = startClientAndServer(getFreePort());
+            consumerDataDestination = startClientAndServer(getFreePort());
+            consumerDataDestination.when(HttpRequest.request()).respond(HttpResponse.response());
+        }
+
+        @AfterAll
+        static void afterAll() {
+            stopQuietly(providerDataSource);
+            stopQuietly(consumerDataDestination);
+        }
+
         @Test
         void httpPushDataTransfer() {
-            seedVaults();
+            providerDataSource.when(HttpRequest.request()).respond(HttpResponse.response().withBody("data"));
             var assetId = UUID.randomUUID().toString();
-            createResourcesOnProvider(assetId, noConstraintPolicy(), httpDataAddressProperties());
-            var destination = httpDataAddress(CONSUMER.backendService() + "/api/consumer/store");
+            var dataAddressProperties = Map.<String, Object>of(
+                    "name", "transfer-test",
+                    "baseUrl", "http://localhost:" + providerDataSource.getPort() + "/source",
+                    "type", "HttpData",
+                    "proxyQueryParams", "true"
+            );
+            createResourcesOnProvider(assetId, dataAddressProperties);
 
-            var transferProcessId = CONSUMER.requestAsset(PROVIDER, assetId, noPrivateProperty(), destination, "HttpData-PUSH");
-            await().atMost(timeout).untilAsserted(() -> {
-                var state = CONSUMER.getTransferProcessState(transferProcessId);
-                assertThat(state).isEqualTo(COMPLETED.name());
+            var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                    .withDestination(httpDataAddress("http://localhost:" + consumerDataDestination.getPort() + "/destination"))
+                    .withTransferType("HttpData-PUSH").execute();
 
-                given()
-                        .baseUri(CONSUMER.backendService().toString())
-                        .when()
-                        .get("/api/consumer/data")
-                        .then()
-                        .statusCode(anyOf(is(200), is(204)))
-                        .body(is(notNullValue()));
-            });
+            awaitTransferToBeInState(transferProcessId, COMPLETED);
+
+            providerDataSource.verify(HttpRequest.request("/source").withMethod("GET"));
+            consumerDataDestination.verify(HttpRequest.request("/destination").withBody(BinaryBody.binary("data".getBytes())));
         }
 
         @Test
         void httpToHttp_oauth2Provisioning() {
-            seedVaults();
+            var oauth2server = startClientAndServer(getFreePort());
+            oauth2server.when(HttpRequest.request()).respond(HttpResponse.response().withBody(json(Map.of("access_token", "token"))));
+            providerDataSource.when(HttpRequest.request()).respond(HttpResponse.response().withBody("data"));
+            getDataplaneVault().storeSecret("provision-oauth-secret", "supersecret");
             var assetId = UUID.randomUUID().toString();
             var sourceDataAddressProperties = Map.<String, Object>of(
                     "type", "HttpData",
-                    "baseUrl", PROVIDER.backendService() + "/api/provider/oauth2data",
+                    "baseUrl", "http://localhost:" + providerDataSource.getPort() + "/source",
                     "oauth2:clientId", "clientId",
                     "oauth2:clientSecretKey", "provision-oauth-secret",
-                    "oauth2:tokenUrl", PROVIDER.backendService() + "/api/oauth2/token"
+                    "oauth2:tokenUrl", "http://localhost:" + oauth2server.getPort() + "/token"
             );
 
-            createResourcesOnProvider(assetId, noConstraintPolicy(), sourceDataAddressProperties);
-            var destination = httpDataAddress(CONSUMER.backendService() + "/api/consumer/store");
+            createResourcesOnProvider(assetId, sourceDataAddressProperties);
 
-            var transferProcessId = CONSUMER.requestAsset(PROVIDER, assetId, noPrivateProperty(), destination, "HttpData-PUSH");
+            var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                    .withDestination(httpDataAddress("http://localhost:" + consumerDataDestination.getPort() + "/destination"))
+                    .withTransferType("HttpData-PUSH").execute();
 
-            await().atMost(timeout).untilAsserted(() -> {
-                var state = CONSUMER.getTransferProcessState(transferProcessId);
-                assertThat(state).isEqualTo(COMPLETED.name());
+            awaitTransferToBeInState(transferProcessId, COMPLETED);
 
-                given()
-                        .baseUri(CONSUMER.backendService().toString())
-                        .when()
-                        .get("/api/consumer/data")
-                        .then()
-                        .statusCode(anyOf(is(200), is(204)))
-                        .body(is(notNullValue()));
-            });
+            oauth2server.verify(HttpRequest.request("/token").withBody("grant_type=client_credentials&client_secret=supersecret&client_id=clientId"));
+            providerDataSource.verify(HttpRequest.request("/source").withMethod("GET").withHeader("Authorization", "Bearer token"));
+            consumerDataDestination.verify(HttpRequest.request("/destination").withBody(BinaryBody.binary("data".getBytes())));
+            stopQuietly(oauth2server);
         }
-
-        protected abstract void seedVaults();
 
         private JsonObject httpDataAddress(String baseUrl) {
             return createObjectBuilder()
@@ -109,20 +122,6 @@ class TransferPushEndToEndTest {
                     .add(EDC_NAMESPACE + "type", "HttpData")
                     .add(EDC_NAMESPACE + "baseUrl", baseUrl)
                     .build();
-        }
-
-        @NotNull
-        private Map<String, Object> httpDataAddressProperties() {
-            return Map.of(
-                    "name", "transfer-test",
-                    "baseUrl", PROVIDER.backendService() + "/api/provider/data",
-                    "type", "HttpData",
-                    "proxyQueryParams", "true"
-            );
-        }
-
-        private JsonObject noPrivateProperty() {
-            return Json.createObjectBuilder().build();
         }
     }
 
@@ -132,25 +131,19 @@ class TransferPushEndToEndTest {
 
         @RegisterExtension
         static final RuntimeExtension CONSUMER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlane("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension CONSUMER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("consumer-backend-service", CONSUMER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE.create("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlane("provider-control-plane", PROVIDER.controlPlaneConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE.create("provider-control-plane", PROVIDER.controlPlaneConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_DATA_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.dataPlane("provider-data-plane", PROVIDER.dataPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension PROVIDER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("provider-backend-service", PROVIDER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_DATA_PLANE.create("provider-data-plane", PROVIDER.dataPlaneConfiguration()));
 
         @Override
-        protected void seedVaults() {
-            seedVault(CONSUMER_CONTROL_PLANE);
-            seedVault(PROVIDER_CONTROL_PLANE);
-            seedVault(PROVIDER_DATA_PLANE);
+        protected Vault getDataplaneVault() {
+            return PROVIDER_DATA_PLANE.getService(Vault.class);
         }
     }
 
@@ -160,21 +153,15 @@ class TransferPushEndToEndTest {
 
         @RegisterExtension
         static final RuntimeExtension CONSUMER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlane("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension CONSUMER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("consumer-backend-service", CONSUMER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE.create("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlaneEmbeddedDataPlane("provider-control-plane", PROVIDER.controlPlaneEmbeddedDataPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension PROVIDER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("provider-backend-service", PROVIDER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE_EMBEDDED_DATA_PLANE.create("provider-control-plane", PROVIDER.controlPlaneEmbeddedDataPlaneConfiguration()));
 
         @Override
-        protected void seedVaults() {
-            seedVault(CONSUMER_CONTROL_PLANE);
-            seedVault(PROVIDER_CONTROL_PLANE);
+        protected Vault getDataplaneVault() {
+            return PROVIDER_CONTROL_PLANE.getService(Vault.class);
         }
     }
 
@@ -190,25 +177,19 @@ class TransferPushEndToEndTest {
 
         @RegisterExtension
         static final RuntimeExtension CONSUMER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.Postgres.controlPlane("consumer-control-plane", CONSUMER.controlPlanePostgresConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension CONSUMER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("consumer-backend-service", CONSUMER.backendServiceConfiguration()));
+                    Runtimes.POSTGRES_CONTROL_PLANE.create("consumer-control-plane", CONSUMER.controlPlanePostgresConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.Postgres.controlPlane("provider-control-plane", PROVIDER.controlPlanePostgresConfiguration()));
+                    Runtimes.POSTGRES_CONTROL_PLANE.create("provider-control-plane", PROVIDER.controlPlanePostgresConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_DATA_PLANE = new RuntimePerClassExtension(
-                Runtimes.Postgres.dataPlane("provider-data-plane", PROVIDER.dataPlanePostgresConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension PROVIDER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("provider-backend-service", PROVIDER.backendServiceConfiguration()));
+                    Runtimes.POSTGRES_DATA_PLANE.create("provider-data-plane", PROVIDER.dataPlanePostgresConfiguration()));
 
         @Override
-        protected void seedVaults() {
-            seedVault(CONSUMER_CONTROL_PLANE);
-            seedVault(PROVIDER_CONTROL_PLANE);
-            seedVault(PROVIDER_DATA_PLANE);
+        protected Vault getDataplaneVault() {
+            return PROVIDER_DATA_PLANE.getService(Vault.class);
         }
     }
 

@@ -37,11 +37,11 @@ import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 @JsonDeserialize(builder = DataFlowStartMessage.Builder.class)
 public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
 
-    public static final String DC_DATA_FLOW_START_MESSAGE_ID = EDC_NAMESPACE + "id";
     public static final String DC_DATA_FLOW_START_MESSAGE_PROCESS_ID = EDC_NAMESPACE + "processId";
     public static final String EDC_DATA_FLOW_START_MESSAGE_SIMPLE_TYPE = "DataFlowStartMessage";
     public static final String EDC_DATA_FLOW_START_MESSAGE_TYPE = EDC_NAMESPACE + EDC_DATA_FLOW_START_MESSAGE_SIMPLE_TYPE;
     public static final String EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE = EDC_NAMESPACE + "flowType";
+    public static final String EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION = EDC_NAMESPACE + "transferTypeDestination";
     public static final String EDC_DATA_FLOW_START_MESSAGE_DATASET_ID = EDC_NAMESPACE + "datasetId";
     public static final String EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID = EDC_NAMESPACE + "participantId";
     public static final String EDC_DATA_FLOW_START_MESSAGE_AGREEMENT_ID = EDC_NAMESPACE + "agreementId";
@@ -59,11 +59,11 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
 
     private DataAddress sourceDataAddress;
     private DataAddress destinationDataAddress;
-    private FlowType flowType = FlowType.PUSH;
     private URI callbackAddress;
 
     private Map<String, String> properties = new HashMap<>();
     private Map<String, String> traceContext = Map.of(); // TODO: should this stay in the DataFlow class?
+    private TransferType transferType;
 
     private DataFlowStartMessage() {
     }
@@ -100,7 +100,7 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
      * The {@link FlowType} for the request
      */
     public FlowType getFlowType() {
-        return flowType;
+        return getTransferType().flowType();
     }
 
     /**
@@ -117,6 +117,14 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
         return assetId;
     }
 
+    /**
+     * The transfer type associated to the request.
+     *
+     * @return the transfer type.
+     */
+    public TransferType getTransferType() {
+        return transferType;
+    }
 
     /**
      * The participant id associated to the request
@@ -157,6 +165,8 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
         private final DataFlowStartMessage request;
+        private String transferTypeDestination;
+        private FlowType flowType;
 
         private Builder() {
             this(new DataFlowStartMessage());
@@ -200,8 +210,18 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
             return this;
         }
 
+        public Builder transferType(TransferType transferType) {
+            request.transferType = transferType;
+            return this;
+        }
+
+        public Builder transferTypeDestination(String transferTypeDestination) {
+            this.transferTypeDestination = transferTypeDestination;
+            return this;
+        }
+
         public Builder flowType(FlowType flowType) {
-            request.flowType = flowType;
+            this.flowType = flowType;
             return this;
         }
 
@@ -244,10 +264,14 @@ public class DataFlowStartMessage implements Polymorphic, TraceCarrier {
             if (request.id == null) {
                 request.id = UUID.randomUUID().toString();
             }
+            if (request.traceContext == null) {
+                request.traceContext = new HashMap<>();
+            }
             Objects.requireNonNull(request.processId, "processId");
             Objects.requireNonNull(request.sourceDataAddress, "sourceDataAddress");
-            Objects.requireNonNull(request.traceContext, "traceContext");
-            Objects.requireNonNull(request.flowType, "flowType");
+            if (request.transferType == null) {
+                request.transferType = new TransferType(this.transferTypeDestination, this.flowType);
+            }
             return request;
         }
 

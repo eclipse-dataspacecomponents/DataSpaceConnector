@@ -22,6 +22,7 @@ import java.time.Instant;
  * @param version     The full version as SemVer string
  * @param urlPath     The path element, e.g. /v3
  * @param lastUpdated When the API's version was last bumped
+ * @param maturity    Maturity level of an API, can be "stable", "deprecated", "alpha" or "beta"
  */
-public record VersionRecord(String version, String urlPath, Instant lastUpdated) {
+public record VersionRecord(String version, String urlPath, Instant lastUpdated, String maturity) {
 }

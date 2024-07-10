@@ -107,25 +107,4 @@ public class TypeTransformerRegistryImplTest {
         }
     }
 
-    @Nested
-    class TypeAlias {
-        @Test
-        void typeAlias_whenNoneExists() {
-            assertThat(registry.typeAlias("test-alias")).isNull();
-            assertThat(registry.typeAlias("test-alias", String.class)).isEqualTo(String.class);
-        }
-
-        @Test
-        void typeAlias_shouldThrowException_whenNull() {
-            assertThat(registry.typeAlias(null)).isNull();
-        }
-
-        @Test
-        void typeAlias_whenExists() {
-            registry.registerTypeAlias("test-alias", String.class);
-            assertThat(registry.typeAlias("test-alias")).isEqualTo(String.class);
-            assertThat(registry.typeAlias("test-alias", Integer.class)).isEqualTo(String.class);
-        }
-    }
-
 }

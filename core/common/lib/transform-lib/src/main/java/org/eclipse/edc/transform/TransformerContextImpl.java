@@ -66,16 +66,6 @@ public class TransformerContextImpl implements TransformerContext {
     }
 
     @Override
-    public Class<?> typeAlias(String type) {
-        return registry.typeAlias(type);
-    }
-
-    @Override
-    public Class<?> typeAlias(String type, Class<?> defaultType) {
-        return registry.typeAlias(type, defaultType);
-    }
-
-    @Override
     public void setData(Class<?> type, String key, Object value) {
         data.computeIfAbsent(type, t -> new HashMap<>()).put(key, new AtomicReference<>(value));
     }

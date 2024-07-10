@@ -45,6 +45,7 @@ public class BaseSqlDataPlaneStatements implements DataPlaneStatements {
                 .jsonColumn(getDestinationColumn())
                 .jsonColumn(getPropertiesColumn())
                 .column(getFlowTypeColumn())
+                .column(getTransferTypeDestinationColumn())
                 .insertInto(getDataPlaneTable());
     }
 
@@ -62,6 +63,7 @@ public class BaseSqlDataPlaneStatements implements DataPlaneStatements {
                 .jsonColumn(getDestinationColumn())
                 .jsonColumn(getPropertiesColumn())
                 .column(getFlowTypeColumn())
+                .column(getTransferTypeDestinationColumn())
                 .update(getDataPlaneTable(), getIdColumn());
     }
 

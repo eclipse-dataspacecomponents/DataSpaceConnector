@@ -53,12 +53,6 @@ public class PolicyMonitorManagerImpl extends AbstractStateEntityManager<PolicyM
     }
 
     @Override
-    protected StateMachineManager.Builder configureStateMachineManager(StateMachineManager.Builder builder) {
-        return builder
-                .processor(processEntriesInState(STARTED, this::processMonitoring));
-    }
-
-    @Override
     public void startMonitoring(String transferProcessId, String contractId) {
         var entry = PolicyMonitorEntry.Builder.newInstance()
                 .id(transferProcessId)
@@ -69,6 +63,12 @@ public class PolicyMonitorManagerImpl extends AbstractStateEntityManager<PolicyM
         entry.transitionToStarted();
 
         update(entry);
+    }
+
+    @Override
+    protected StateMachineManager.Builder configureStateMachineManager(StateMachineManager.Builder builder) {
+        return builder
+                .processor(processEntriesInState(STARTED, this::processMonitoring));
     }
 
     private boolean processMonitoring(PolicyMonitorEntry entry) {
@@ -110,8 +110,10 @@ public class PolicyMonitorManagerImpl extends AbstractStateEntityManager<PolicyM
             }
         }
 
-        breakLease(entry);
-        return true;
+        // we update the state timestamp ensure fairness on polling on  `STARTED` state
+        // the lease will be broken in `onNotProcessed`
+        entry.updateStateTimestamp();
+        return false;
     }
 
     private Processor processEntriesInState(PolicyMonitorEntryStates state, Function<PolicyMonitorEntry, Boolean> function) {
@@ -125,12 +127,12 @@ public class PolicyMonitorManagerImpl extends AbstractStateEntityManager<PolicyM
     public static class Builder
             extends AbstractStateEntityManager.Builder<PolicyMonitorEntry, PolicyMonitorStore, PolicyMonitorManagerImpl, Builder> {
 
-        public static Builder newInstance() {
-            return new Builder();
-        }
-
         private Builder() {
             super(new PolicyMonitorManagerImpl());
+        }
+
+        public static Builder newInstance() {
+            return new Builder();
         }
 
         public Builder contractAgreementService(ContractAgreementService contractAgreementService) {

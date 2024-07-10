@@ -38,6 +38,7 @@ import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowResponseMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.eclipse.edc.transform.TypeTransformerRegistryImpl;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.eclipse.edc.transform.transformer.dspace.from.JsonObjectFromDataAddressDspaceTransformer;
@@ -263,7 +264,7 @@ class DataPlaneSignalingClientTest {
             return DataFlowStartMessage.Builder.newInstance()
                     .id("123")
                     .processId("456")
-                    .flowType(FlowType.PULL)
+                    .transferType(new TransferType("DestinationType", FlowType.PULL))
                     .assetId("assetId")
                     .agreementId("agreementId")
                     .participantId("participantId")

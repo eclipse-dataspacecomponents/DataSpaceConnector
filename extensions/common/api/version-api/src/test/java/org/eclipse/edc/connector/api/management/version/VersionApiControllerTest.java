@@ -45,7 +45,7 @@ class VersionApiControllerTest extends RestControllerTestBase {
 
     @Test
     void getVersion() {
-        when(apiServiceMock.getRecords()).thenReturn(Map.of("test-api", List.of(new VersionRecord("1.0.0", "/v1", Instant.now()))));
+        when(apiServiceMock.getRecords()).thenReturn(Map.of("test-api", List.of(new VersionRecord("1.0.0", "/v1", Instant.now(), "deprecated"))));
         var result = baseRequest()
                 .get("/v1/version")
                 .then()

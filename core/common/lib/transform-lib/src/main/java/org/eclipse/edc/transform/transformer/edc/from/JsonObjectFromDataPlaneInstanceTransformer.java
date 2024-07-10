@@ -18,14 +18,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonBuilderFactory;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance;
+import org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstanceStates;
 import org.eclipse.edc.jsonld.spi.transformer.AbstractJsonLdTransformer;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Optional;
+
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.ALLOWED_DEST_TYPES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.ALLOWED_SOURCE_TYPES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.ALLOWED_TRANSFER_TYPES;
+import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.DATAPLANE_INSTANCE_STATE;
+import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.DATAPLANE_INSTANCE_STATE_TIMESTAMP;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.LAST_ACTIVE;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.PROPERTIES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.TURN_COUNT;
@@ -68,6 +73,13 @@ public class JsonObjectFromDataPlaneInstanceTransformer extends AbstractJsonLdTr
         var transferTypesBldr = jsonFactory.createArrayBuilder(dataPlaneInstance.getAllowedTransferTypes());
         builder.add(ALLOWED_TRANSFER_TYPES, transferTypesBldr);
 
+        var state = Optional.ofNullable(DataPlaneInstanceStates.from(dataPlaneInstance.getState()))
+                .map(Enum::name)
+                .orElse(null);
+
+        addIfNotNull(state, DATAPLANE_INSTANCE_STATE, builder);
+
+        builder.add(DATAPLANE_INSTANCE_STATE_TIMESTAMP, dataPlaneInstance.getStateTimestamp());
 
         return builder.build();
     }

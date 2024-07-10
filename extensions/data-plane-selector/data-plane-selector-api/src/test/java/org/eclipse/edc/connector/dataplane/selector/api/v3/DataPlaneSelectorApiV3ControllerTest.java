@@ -17,7 +17,7 @@ package org.eclipse.edc.connector.dataplane.selector.api.v3;
 import io.restassured.specification.RequestSpecification;
 import jakarta.json.JsonArray;
 import org.eclipse.edc.connector.dataplane.selector.spi.store.DataPlaneInstanceStore;
-import org.eclipse.edc.junit.annotations.ComponentTest;
+import org.eclipse.edc.junit.annotations.ApiTest;
 import org.eclipse.edc.junit.extensions.EdcExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ import static org.eclipse.edc.connector.dataplane.selector.TestFunctions.createI
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.util.io.Ports.getFreePort;
 
-@ComponentTest
+@ApiTest
 @ExtendWith(EdcExtension.class)
 public class DataPlaneSelectorApiV3ControllerTest {
 

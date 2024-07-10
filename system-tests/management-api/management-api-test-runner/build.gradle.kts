@@ -39,6 +39,7 @@ dependencies {
     testImplementation(libs.awaitility)
     testImplementation(libs.junit.jupiter.api)
     testImplementation(testFixtures(project(":extensions:common:sql:sql-core")))
+    testImplementation(project(":extensions:common:transaction:transaction-local"))
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.testcontainers.postgres)
 }

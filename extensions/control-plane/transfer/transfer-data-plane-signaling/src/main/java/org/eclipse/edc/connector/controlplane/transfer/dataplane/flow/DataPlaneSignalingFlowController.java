@@ -17,7 +17,7 @@ package org.eclipse.edc.connector.controlplane.transfer.dataplane.flow;
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowController;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowPropertiesProvider;
-import org.eclipse.edc.connector.controlplane.transfer.spi.flow.FlowTypeExtractor;
+import org.eclipse.edc.connector.controlplane.transfer.spi.flow.TransferTypeParser;
 import org.eclipse.edc.connector.controlplane.transfer.spi.types.DataFlowResponse;
 import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcess;
 import org.eclipse.edc.connector.dataplane.selector.spi.DataPlaneSelectorService;
@@ -54,29 +54,29 @@ public class DataPlaneSignalingFlowController implements DataFlowController {
     private final DataPlaneClientFactory clientFactory;
     private final DataFlowPropertiesProvider propertiesProvider;
     private final String selectionStrategy;
-    private final FlowTypeExtractor flowTypeExtractor;
+    private final TransferTypeParser transferTypeParser;
 
     public DataPlaneSignalingFlowController(ControlApiUrl callbackUrl, DataPlaneSelectorService selectorClient,
                                             DataFlowPropertiesProvider propertiesProvider, DataPlaneClientFactory clientFactory,
-                                            String selectionStrategy, FlowTypeExtractor flowTypeExtractor) {
+                                            String selectionStrategy, TransferTypeParser transferTypeParser) {
         this.callbackUrl = callbackUrl;
         this.selectorClient = selectorClient;
         this.propertiesProvider = propertiesProvider;
         this.clientFactory = clientFactory;
         this.selectionStrategy = selectionStrategy;
-        this.flowTypeExtractor = flowTypeExtractor;
+        this.transferTypeParser = transferTypeParser;
     }
 
     @Override
     public boolean canHandle(TransferProcess transferProcess) {
-        return flowTypeExtractor.extract(transferProcess.getTransferType()).succeeded();
+        return transferTypeParser.parse(transferProcess.getTransferType()).succeeded();
     }
 
     @Override
     public @NotNull StatusResult<DataFlowResponse> start(TransferProcess transferProcess, Policy policy) {
-        var flowType = flowTypeExtractor.extract(transferProcess.getTransferType());
-        if (flowType.failed()) {
-            return StatusResult.failure(FATAL_ERROR, flowType.getFailureDetail());
+        var transferTypeParse = transferTypeParser.parse(transferProcess.getTransferType());
+        if (transferTypeParse.failed()) {
+            return StatusResult.failure(FATAL_ERROR, transferTypeParse.getFailureDetail());
         }
 
         var propertiesResult = propertiesProvider.propertiesFor(transferProcess, policy);
@@ -97,7 +97,7 @@ public class DataPlaneSignalingFlowController implements DataFlowController {
                 .participantId(policy.getAssignee())
                 .agreementId(transferProcess.getContractId())
                 .assetId(transferProcess.getAssetId())
-                .flowType(flowType.getContent())
+                .transferType(transferTypeParse.getContent())
                 .callbackAddress(callbackUrl != null ? callbackUrl.get() : null)
                 .properties(propertiesResult.getContent())
                 .build();

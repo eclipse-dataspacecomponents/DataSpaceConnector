@@ -26,13 +26,15 @@ import java.util.function.Function;
  * For example, for HTTP transfers this would likely return the internet-facing HTTP URL of the data plane ("public url").
  */
 public interface PublicEndpointGeneratorService {
+
     /**
-     * Generates an endpoint for a particular resource (={@link DataAddress}).
+     * Generates an endpoint for a destination type and a particular {@link DataAddress}
      *
-     * @param sourceDataAddress The (private) resource identified by an internal {@link DataAddress}.
+     * @param destinationType the destination type
+     * @param sourceDataAddress the source data address.
      * @return The public {@link Endpoint} where the data is made available, or a failure if the endpoint could not be generated.
      */
-    Result<Endpoint> generateFor(DataAddress sourceDataAddress);
+    Result<Endpoint> generateFor(String destinationType, DataAddress sourceDataAddress);
 
     /**
      * Adds a function that can generate a {@link Endpoint} for particular source data address. Typically, the source data address

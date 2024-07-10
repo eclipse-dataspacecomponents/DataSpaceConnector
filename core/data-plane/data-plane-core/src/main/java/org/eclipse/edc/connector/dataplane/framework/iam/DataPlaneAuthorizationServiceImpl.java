@@ -27,10 +27,10 @@ import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 
 import java.time.Clock;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static java.util.stream.Collectors.toMap;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.result.Result.success;
 
@@ -60,27 +60,27 @@ public class DataPlaneAuthorizationServiceImpl implements DataPlaneAuthorization
 
     @Override
     public Result<DataAddress> createEndpointDataReference(DataFlowStartMessage message) {
-        var endpoint = endpointGenerator.generateFor(message.getSourceDataAddress());
+        return endpointGenerator.generateFor(message.getTransferType().destinationType(), message.getSourceDataAddress())
+                .compose(endpoint -> {
+                            var additionalProperties = new HashMap<String, Object>(message.getProperties());
+                            additionalProperties.put(PROPERTY_AGREEMENT_ID, message.getAgreementId());
+                            additionalProperties.put(PROPERTY_ASSET_ID, message.getAssetId());
+                            additionalProperties.put(PROPERTY_PROCESS_ID, message.getProcessId());
+                            additionalProperties.put(PROPERTY_FLOW_TYPE, message.getFlowType().toString());
+                            additionalProperties.put(PROPERTY_PARTICIPANT_ID, message.getParticipantId());
 
-        var additionalProperties = message.getProperties().entrySet().stream().collect(toMap(Map.Entry::getKey, entry -> (Object) entry.getValue()));
-
-        additionalProperties.put(PROPERTY_AGREEMENT_ID, message.getAgreementId());
-        additionalProperties.put(PROPERTY_ASSET_ID, message.getAssetId());
-        additionalProperties.put(PROPERTY_PROCESS_ID, message.getProcessId());
-        additionalProperties.put(PROPERTY_FLOW_TYPE, message.getFlowType().toString());
-        additionalProperties.put(PROPERTY_PARTICIPANT_ID, message.getParticipantId());
-
-        return endpoint.compose(e -> accessTokenService.obtainToken(createTokenParams(message), message.getSourceDataAddress(), additionalProperties))
-                .compose(tokenRepresentation -> createDataAddress(tokenRepresentation, endpoint.getContent()));
+                            return accessTokenService.obtainToken(createTokenParams(message), message.getSourceDataAddress(), additionalProperties)
+                                    .compose(tokenRepresentation -> createDataAddress(tokenRepresentation, endpoint));
+                        }
+                );
     }
 
     @Override
     public Result<DataAddress> authorize(String token, Map<String, Object> requestData) {
-        var accessTokenDataResult = accessTokenService.resolve(token);
-
-        return accessTokenDataResult
-                .compose(atd -> accessControlService.checkAccess(atd.claimToken(), atd.dataAddress(), requestData, atd.additionalProperties()))
-                .map(u -> accessTokenDataResult.getContent().dataAddress());
+        return accessTokenService.resolve(token)
+                .compose(atd -> accessControlService.checkAccess(atd.claimToken(), atd.dataAddress(), requestData, atd.additionalProperties())
+                    .map(u -> atd.dataAddress())
+                );
     }
 
     @Override

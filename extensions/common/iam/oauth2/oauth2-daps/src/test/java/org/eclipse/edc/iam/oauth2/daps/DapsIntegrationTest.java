@@ -74,7 +74,6 @@ class DapsIntegrationTest {
 
     @BeforeEach
     protected void before(EdcExtension extension) {
-        System.setProperty("edc.vault", "src/test/resources/empty-vault.properties");
         System.setProperty("edc.keystore", "src/test/resources/keystore.p12");
         System.setProperty("edc.keystore.password", CLIENT_KEYSTORE_PASSWORD);
 

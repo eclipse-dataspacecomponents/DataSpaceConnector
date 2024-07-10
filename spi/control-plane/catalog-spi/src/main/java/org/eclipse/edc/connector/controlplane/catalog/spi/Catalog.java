@@ -19,26 +19,16 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import static java.util.UUID.randomUUID;
 
 /**
  * Entity representing a Catalog
  */
 @JsonDeserialize(builder = Catalog.Builder.class)
-public class Catalog {
-    private String id;
-    private List<Dataset> datasets = new ArrayList<>();
-    private List<DataService> dataServices;
-    private Map<String, Object> properties;
-    private String participantId;
-
-    public String getId() {
-        return id;
-    }
+public class Catalog extends Dataset {
+    protected final List<Dataset> datasets = new ArrayList<>();
+    protected List<DataService> dataServices = new ArrayList<>();
+    protected String participantId;
 
     public List<Dataset> getDatasets() {
         return datasets;
@@ -48,78 +38,47 @@ public class Catalog {
         return dataServices;
     }
 
-    public Map<String, Object> getProperties() {
-        return properties;
-    }
-
     public String getParticipantId() {
         return participantId;
     }
 
     @JsonPOJOBuilder(withPrefix = "")
-    public static class Builder {
-        private final Catalog catalog;
+    public static class Builder extends Dataset.Builder<Catalog, Catalog.Builder> {
 
         private Builder() {
-            catalog = new Catalog();
+            super(new Catalog());
         }
 
         public static Builder newInstance() {
             return new Builder();
         }
 
-        public Builder id(String id) {
-            catalog.id = id;
-            return this;
-        }
-
         public Builder datasets(List<Dataset> datasets) {
-            catalog.datasets.addAll(datasets);
+            dataset.datasets.addAll(datasets);
             return this;
         }
 
         public Builder dataset(Dataset dataset) {
-            catalog.datasets.add(dataset);
+            this.dataset.datasets.add(dataset);
             return this;
         }
 
         public Builder dataServices(List<DataService> dataServices) {
-            catalog.dataServices = dataServices;
+            this.dataset.dataServices = dataServices;
             return this;
         }
 
         public Builder dataService(DataService dataService) {
-            if (catalog.dataServices == null) {
-                catalog.dataServices = new ArrayList<>();
+            if (this.dataset.dataServices == null) {
+                this.dataset.dataServices = new ArrayList<>();
             }
-            catalog.dataServices.add(dataService);
-            return this;
-        }
-
-        public Builder properties(Map<String, Object> properties) {
-            catalog.properties = properties;
-            return this;
-        }
-
-        public Builder property(String key, Object value) {
-            if (catalog.properties == null) {
-                catalog.properties = new HashMap<>();
-            }
-            catalog.properties.put(key, value);
+            this.dataset.dataServices.add(dataService);
             return this;
         }
 
         public Builder participantId(String participantId) {
-            catalog.participantId = participantId;
+            this.dataset.participantId = participantId;
             return this;
-        }
-
-        public Catalog build() {
-            if (catalog.id == null) {
-                catalog.id = randomUUID().toString();
-            }
-
-            return catalog;
         }
     }
 }

@@ -78,6 +78,51 @@ class JsonObjectToPresentationQueryMessageTransformerTest {
         assertThat(query.getPresentationDefinition()).isNull();
     }
 
+
+    @Test
+    void transform_withEmptyScopes() throws JsonProcessingException {
+        var obj = """
+                {
+                  "@context": [
+                    "https://identity.foundation/presentation-exchange/submission/v1",
+                    "https://w3id.org/tractusx-trust/v0.8"
+                  ],
+                  "@type": "PresentationQueryMessage",
+                  "scope": []
+                }
+                """;
+        var json = mapper.readValue(obj, JsonObject.class);
+        var jo = jsonLd.expand(json);
+        assertThat(jo.succeeded()).withFailMessage(jo::getFailureDetail).isTrue();
+
+        var query = transformer.transform(jo.getContent(), context);
+        assertThat(query).isNotNull();
+        assertThat(query.getScopes()).isEmpty();
+        assertThat(query.getPresentationDefinition()).isNull();
+    }
+
+    @Test
+    void transform_withNullScopes() throws JsonProcessingException {
+        var obj = """
+                {
+                  "@context": [
+                    "https://identity.foundation/presentation-exchange/submission/v1",
+                    "https://w3id.org/tractusx-trust/v0.8"
+                  ],
+                  "@type": "PresentationQueryMessage"
+                }
+                """;
+        var json = mapper.readValue(obj, JsonObject.class);
+        var jo = jsonLd.expand(json);
+        assertThat(jo.succeeded()).withFailMessage(jo::getFailureDetail).isTrue();
+
+        var query = transformer.transform(jo.getContent(), context);
+        assertThat(query).isNotNull();
+        assertThat(query.getScopes()).isEmpty();
+        assertThat(query.getPresentationDefinition()).isNull();
+    }
+
+
     @Test
     void transform_withScopes_separatedByWhitespace() throws JsonProcessingException {
         var obj = """

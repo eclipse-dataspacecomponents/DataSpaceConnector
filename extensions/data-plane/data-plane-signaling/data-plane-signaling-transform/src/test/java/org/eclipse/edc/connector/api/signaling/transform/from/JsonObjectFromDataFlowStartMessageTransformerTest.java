@@ -18,6 +18,7 @@ import jakarta.json.Json;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_SOURCE_DATA_ADDRESS;
+import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_TYPE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -44,7 +46,7 @@ import static org.mockito.Mockito.when;
 
 class JsonObjectFromDataFlowStartMessageTransformerTest {
 
-    private final TransformerContext context = mock(TransformerContext.class);
+    private final TransformerContext context = mock();
     private JsonObjectFromDataFlowStartMessageTransformer transformer;
 
     @BeforeEach
@@ -55,13 +57,12 @@ class JsonObjectFromDataFlowStartMessageTransformerTest {
 
     @Test
     void transform() {
-
         var message = DataFlowStartMessage.Builder.newInstance()
                 .processId("processId")
                 .assetId("assetId")
                 .agreementId("agreementId")
                 .participantId("participantId")
-                .flowType(FlowType.PUSH)
+                .transferType(new TransferType("HttpData", FlowType.PUSH))
                 .callbackAddress(URI.create("http://localhost"))
                 .sourceDataAddress(DataAddress.Builder.newInstance().type("sourceType").build())
                 .destinationDataAddress(DataAddress.Builder.newInstance().type("destType").build())
@@ -70,17 +71,37 @@ class JsonObjectFromDataFlowStartMessageTransformerTest {
         var jsonObject = transformer.transform(message, context);
 
         assertThat(jsonObject).isNotNull();
-
         assertThat(jsonObject.getJsonString(TYPE).getString()).isEqualTo(EDC_DATA_FLOW_START_MESSAGE_TYPE);
         assertThat(jsonObject.getJsonString(DC_DATA_FLOW_START_MESSAGE_PROCESS_ID).getString()).isEqualTo(message.getProcessId());
         assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_DATASET_ID).getString()).isEqualTo(message.getAssetId());
         assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_AGREEMENT_ID).getString()).isEqualTo(message.getAgreementId());
         assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID).getString()).isEqualTo(message.getParticipantId());
         assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_DESTINATION_CALLBACK_ADDRESS).getString()).isEqualTo(message.getCallbackAddress().toString());
+        assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION).getString()).isEqualTo("HttpData");
         assertThat(jsonObject.getJsonString(EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE).getString()).isEqualTo(message.getFlowType().toString());
         assertThat(jsonObject.get(EDC_DATA_FLOW_START_MESSAGE_DESTINATION_DATA_ADDRESS)).isNotNull();
         assertThat(jsonObject.get(EDC_DATA_FLOW_START_MESSAGE_SOURCE_DATA_ADDRESS)).isNotNull();
+    }
 
+    @Test
+    void transform_whenTransferTypeIsNull() {
+        var message = DataFlowStartMessage.Builder.newInstance()
+                .processId("any")
+                .sourceDataAddress(DataAddress.Builder.newInstance().type("any").build())
+                .agreementId("agreementId")
+                .participantId("participantId")
+                .assetId("assetId")
+                .callbackAddress(URI.create("http://localhost"))
+                .transferType(null)
+                .transferTypeDestination("DestinationType")
+                .flowType(FlowType.PULL)
+                .build();
+
+        var jsonObject = transformer.transform(message, context);
+
+        assertThat(jsonObject).isNotNull();
+        assertThat(jsonObject.getString(EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION)).isEqualTo("DestinationType");
+        assertThat(jsonObject.getString(EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE)).isEqualTo("PULL");
     }
 
 }

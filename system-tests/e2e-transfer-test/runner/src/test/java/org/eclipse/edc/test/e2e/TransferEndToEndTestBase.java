@@ -15,13 +15,17 @@
 package org.eclipse.edc.test.e2e;
 
 import jakarta.json.JsonObject;
-import org.eclipse.edc.junit.extensions.RuntimeExtension;
+import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates;
 import org.eclipse.edc.spi.security.Vault;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
+import static org.awaitility.Awaitility.await;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.noConstraintPolicy;
 import static org.eclipse.edc.junit.testfixtures.TestUtils.getResourceFileContentAsString;
 
@@ -35,25 +39,43 @@ public abstract class TransferEndToEndTestBase {
             .name("provider")
             .id("urn:connector:provider")
             .build();
-    protected final Duration timeout = Duration.ofSeconds(60);
 
-    protected static void seedVault(RuntimeExtension runtime) {
-        var vault = runtime.getService(Vault.class);
+    protected static String privateKey = getResourceFileContentAsString("certs/key.pem");
+    protected static String publicKey = getResourceFileContentAsString("certs/cert.pem");
 
-        var privateKeyContent = getResourceFileContentAsString("certs/key.pem");
-        vault.storeSecret("1", privateKeyContent);
+    protected static String noConstraintPolicyId;
 
-        var publicKey = getResourceFileContentAsString("certs/cert.pem");
-        vault.storeSecret("public-key", publicKey);
-
-        vault.storeSecret("provision-oauth-secret", "supersecret");
+    @BeforeAll
+    static void createNoConstraintPolicy() {
+        noConstraintPolicyId = PROVIDER.createPolicyDefinition(noConstraintPolicy());
     }
+
+    @BeforeEach
+    void storeKeys() {
+        getDataplaneVault().storeSecret("private-key", privateKey);
+        getDataplaneVault().storeSecret("public-key", publicKey);
+    }
+
+    protected abstract Vault getDataplaneVault();
+
+    protected final Duration timeout = Duration.ofSeconds(60);
 
     protected void createResourcesOnProvider(String assetId, JsonObject contractPolicy, Map<String, Object> dataAddressProperties) {
         PROVIDER.createAsset(assetId, Map.of("description", "description"), dataAddressProperties);
-        var accessPolicyId = PROVIDER.createPolicyDefinition(noConstraintPolicy());
         var contractPolicyId = PROVIDER.createPolicyDefinition(contractPolicy);
-        PROVIDER.createContractDefinition(assetId, UUID.randomUUID().toString(), accessPolicyId, contractPolicyId);
+        PROVIDER.createContractDefinition(assetId, UUID.randomUUID().toString(), noConstraintPolicyId, contractPolicyId);
+    }
+
+    protected void createResourcesOnProvider(String assetId, Map<String, Object> dataAddressProperties) {
+        PROVIDER.createAsset(assetId, Map.of("description", "description"), dataAddressProperties);
+        PROVIDER.createContractDefinition(assetId, UUID.randomUUID().toString(), noConstraintPolicyId, noConstraintPolicyId);
+    }
+
+    protected void awaitTransferToBeInState(String transferProcessId, TransferProcessStates state) {
+        await().atMost(timeout).until(
+                () -> CONSUMER.getTransferProcessState(transferProcessId),
+                it -> Objects.equals(it, state.name())
+        );
     }
 
 }

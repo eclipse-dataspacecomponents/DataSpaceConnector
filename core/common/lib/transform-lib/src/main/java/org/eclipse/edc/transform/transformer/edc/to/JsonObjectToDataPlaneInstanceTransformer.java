@@ -34,6 +34,7 @@ import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlan
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.ALLOWED_SOURCE_TYPES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.ALLOWED_TRANSFER_TYPES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.Builder;
+import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.DATAPLANE_INSTANCE_STATE_TIMESTAMP;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.LAST_ACTIVE;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.PROPERTIES;
 import static org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance.TURN_COUNT;
@@ -76,6 +77,7 @@ public class JsonObjectToDataPlaneInstanceTransformer extends AbstractJsonLdTran
                 var set = jsonValue.asJsonArray().stream().map(jv -> transformString(jv, context)).collect(Collectors.toSet());
                 builder.allowedTransferType(set);
             }
+            case DATAPLANE_INSTANCE_STATE_TIMESTAMP -> transformLong(context, jsonValue, builder::stateTimestamp);
             case PROPERTIES -> {
                 var props = jsonValue.asJsonArray().getJsonObject(0);
                 visitProperties(props, (k, val) -> transformProperties(k, val, builder, context));

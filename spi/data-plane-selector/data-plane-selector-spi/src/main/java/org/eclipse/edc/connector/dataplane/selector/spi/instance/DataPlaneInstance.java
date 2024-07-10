@@ -54,6 +54,10 @@ public class DataPlaneInstance extends StatefulEntity<DataPlaneInstance> {
     @Deprecated(since = "0.7.0")
     public static final String ALLOWED_DEST_TYPES = EDC_NAMESPACE + "allowedDestTypes";
 
+    public static final String DATAPLANE_INSTANCE_STATE = EDC_NAMESPACE + "state";
+    public static final String DATAPLANE_INSTANCE_STATE_TIMESTAMP = EDC_NAMESPACE + "stateTimestamp";
+
+
     private Map<String, Object> properties = new HashMap<>();
     private Set<String> allowedTransferTypes = new HashSet<>();
     private Set<String> allowedSourceTypes = new HashSet<>();
@@ -91,7 +95,7 @@ public class DataPlaneInstance extends StatefulEntity<DataPlaneInstance> {
      * transferType against an internal list of allowed source and transfer types.
      *
      * @param sourceAddress the sourceAddress
-     * @param transferType the transferType
+     * @param transferType  the transferType
      * @return true if it can handle, false otherwise.
      */
     public boolean canHandle(DataAddress sourceAddress, @Nullable String transferType) {

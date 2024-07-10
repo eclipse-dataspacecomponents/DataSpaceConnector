@@ -23,11 +23,13 @@ import org.eclipse.edc.spi.entity.StatefulEntity;
 import org.eclipse.edc.spi.result.StoreFailure;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.UUID;
 
 import static java.util.stream.IntStream.range;
@@ -69,8 +71,8 @@ public abstract class DataPlaneStoreTestBase {
                 .callbackAddress(URI.create("http://any"))
                 .source(DataAddress.Builder.newInstance().type("src-type").build())
                 .destination(DataAddress.Builder.newInstance().type("dest-type").build())
-                .flowType(FlowType.PUSH)
                 .state(state.code())
+                .transferType(new TransferType("transferType", FlowType.PUSH))
                 .build();
     }
 
@@ -176,6 +178,23 @@ public abstract class DataPlaneStoreTestBase {
 
             var thirdLeased = getStore().nextNotLeased(1, hasState(RECEIVED.code()));
             assertThat(thirdLeased).hasSize(1);
+        }
+
+        @Test
+        void shouldLeaseOrderByStateTimestamp() {
+
+            var all = range(0, 10)
+                    .mapToObj(i -> createDataFlow("id-" + i, RECEIVED))
+                    .peek(getStore()::save)
+                    .toList();
+
+            all.stream().limit(5)
+                    .peek(this::delayByTenMillis)
+                    .sorted(Comparator.comparing(DataFlow::getStateTimestamp).reversed())
+                    .forEach(f -> getStore().save(f));
+
+            var elements = getStore().nextNotLeased(10, hasState(RECEIVED.code()));
+            assertThat(elements).hasSize(10).extracting(DataFlow::getStateTimestamp).isSorted();
         }
 
         private void delayByTenMillis(StatefulEntity<?> t) {

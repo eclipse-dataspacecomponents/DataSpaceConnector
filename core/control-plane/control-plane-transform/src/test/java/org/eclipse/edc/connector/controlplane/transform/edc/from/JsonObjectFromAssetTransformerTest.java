@@ -16,7 +16,10 @@ package org.eclipse.edc.connector.controlplane.transform.edc.from;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.transform.Payload;
 import org.eclipse.edc.spi.types.domain.DataAddress;
@@ -29,6 +32,7 @@ import java.util.Map;
 import static jakarta.json.Json.createArrayBuilder;
 import static jakarta.json.Json.createObjectBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset.EDC_ASSET_DATA_ADDRESS;
 import static org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset.EDC_ASSET_PRIVATE_PROPERTIES;
 import static org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset.EDC_ASSET_PROPERTIES;
@@ -131,7 +135,17 @@ class JsonObjectFromAssetTransformerTest {
         var jsonObject = transformer.transform(asset, context);
 
         assertThat(jsonObject).isNotNull();
-        assertThat(jsonObject.getJsonObject(EDC_ASSET_PROPERTIES).getJsonObject("https://foo.bar.org/schema/payload")).isInstanceOf(JsonObject.class);
+        assertThat(jsonObject.getJsonObject(EDC_ASSET_PROPERTIES).getJsonObject("https://foo.bar.org/schema/payload")).isInstanceOf(JsonObject.class)
+                .satisfies(payload -> {
+                    assertThat(payload.get("name")).satisfies(name -> {
+                        assertThat(name.getValueType()).isEqualTo(JsonValue.ValueType.STRING);
+                        assertThat(name).asInstanceOf(type(JsonString.class)).extracting(JsonString::getString).isEqualTo("foo-bar");
+                    });
+                    assertThat(payload.get("age")).satisfies(age -> {
+                        assertThat(age.getValueType()).isEqualTo(JsonValue.ValueType.NUMBER);
+                        assertThat(age).asInstanceOf(type(JsonNumber.class)).extracting(JsonNumber::doubleValue).isEqualTo(42d);
+                    });
+                });
     }
 
     @Test

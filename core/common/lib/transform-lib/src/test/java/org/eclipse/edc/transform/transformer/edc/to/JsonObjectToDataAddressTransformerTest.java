@@ -35,7 +35,6 @@ import static org.eclipse.edc.jsonld.util.JacksonJsonLd.createObjectMapper;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_PREFIX;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
@@ -78,9 +77,9 @@ class JsonObjectToDataAddressTransformerTest {
                         .add("my-test-prop", "some-test-value")
                         .build())
                 .build();
-        json = expand(json);
 
-        var dataAddress = transformer.transform(json, transformerContext);
+        var dataAddress = transformer.transform(expand(json), transformerContext);
+
         assertThat(dataAddress).isNotNull();
         assertThat(dataAddress.getType()).isEqualTo(TEST_TYPE);
         assertThat(dataAddress.getStringProperty(EDC_NAMESPACE + "my-test-prop")).isEqualTo("some-test-value");
@@ -88,16 +87,15 @@ class JsonObjectToDataAddressTransformerTest {
 
     @Test
     void transform_withComplexCustomProps_shouldReportProblem() {
-        when(transformerContext.typeAlias(endsWith("customPayload"))).thenAnswer(i -> Payload.class);
         when(transformerContext.transform(isA(JsonValue.class), eq(Payload.class))).thenReturn(new Payload(CUSTOM_PAYLOAD_NAME, CUSTOM_PAYLOAD_AGE));
         var json = createDataAddress()
                 .add(EDC_NAMESPACE + "properties", createObjectBuilder()
                         .add("payload", createPayloadBuilder().build())
                         .build())
                 .build();
-        json = expand(json);
 
-        var dataAddress = transformer.transform(json, transformerContext);
+        var dataAddress = transformer.transform(expand(json), transformerContext);
+
         assertThat(dataAddress).isNotNull();
         assertThat(dataAddress.getType()).isEqualTo(TEST_TYPE);
         assertThat(dataAddress.getKeyName()).isEqualTo(TEST_KEY_NAME);

@@ -16,7 +16,7 @@ package org.eclipse.edc.test.e2e.versionapi;
 
 import io.restassured.common.mapper.TypeRef;
 import org.eclipse.edc.junit.annotations.EndToEndTest;
-import org.eclipse.edc.junit.extensions.EdcRuntimeExtension;
+import org.eclipse.edc.junit.extensions.RuntimeExtension;
 import org.eclipse.edc.spi.system.apiversion.VersionRecord;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -36,10 +36,7 @@ public class VersionApiEndToEndTest {
 
     abstract static class Tests {
 
-        private final EdcRuntimeExtension runtime;
-
-        Tests(EdcRuntimeExtension runtime) {
-            this.runtime = runtime;
+        Tests() {
         }
 
         @Test
@@ -57,6 +54,12 @@ public class VersionApiEndToEndTest {
                     });
 
             assertThat(result).containsKeys("management", "version", "control", "observability", "sts");
+            assertThat(result.get("management")).hasSize(2)
+                    .anyMatch(vr -> vr.version().equals("3.0.2") && vr.maturity().equals("stable"))
+                    .anyMatch(vr -> vr.version().equals("3.1.0-alpha") && vr.maturity().equals("alpha"));
+            assertThat(result.get("version")).hasSize(1).anyMatch(vr -> vr.version().equals("1.0.0"));
+            assertThat(result.get("observability")).hasSize(1).anyMatch(vr -> vr.version().equals("1.0.0"));
+            assertThat(result.get("sts")).hasSize(1).anyMatch(vr -> vr.version().equals("1.0.0"));
         }
     }
 
@@ -65,10 +68,10 @@ public class VersionApiEndToEndTest {
     class InMemory extends Tests {
 
         @RegisterExtension
-        public static final EdcRuntimeExtension RUNTIME = Runtimes.inMemoryRuntime();
+        public static final RuntimeExtension RUNTIME = Runtimes.inMemoryRuntime();
 
         InMemory() {
-            super(RUNTIME);
+            super();
         }
 
     }

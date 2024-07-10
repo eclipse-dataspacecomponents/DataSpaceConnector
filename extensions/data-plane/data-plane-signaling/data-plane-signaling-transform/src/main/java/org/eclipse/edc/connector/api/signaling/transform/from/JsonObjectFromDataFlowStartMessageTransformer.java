@@ -33,6 +33,7 @@ import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_PARTICIPANT_ID;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_PROPERTIES;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_SOURCE_DATA_ADDRESS;
+import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION;
 import static org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage.EDC_DATA_FLOW_START_MESSAGE_TYPE;
 
 /**
@@ -54,7 +55,8 @@ public class JsonObjectFromDataFlowStartMessageTransformer extends AbstractJsonL
         transformProperties(message.getProperties(), propertiesBuilder, mapper, context);
         var builder = jsonFactory.createObjectBuilder()
                 .add(TYPE, EDC_DATA_FLOW_START_MESSAGE_TYPE)
-                .add(EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE, message.getFlowType().toString())
+                .add(EDC_DATA_FLOW_START_MESSAGE_TRANSFER_TYPE_DESTINATION, message.getTransferType().destinationType())
+                .add(EDC_DATA_FLOW_START_MESSAGE_FLOW_TYPE, message.getTransferType().flowType().toString())
                 .add(EDC_DATA_FLOW_START_MESSAGE_AGREEMENT_ID, message.getAgreementId())
                 .add(DC_DATA_FLOW_START_MESSAGE_PROCESS_ID, message.getProcessId())
                 .add(EDC_DATA_FLOW_START_MESSAGE_DATASET_ID, message.getAssetId())

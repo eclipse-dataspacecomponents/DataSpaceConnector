@@ -16,7 +16,7 @@ package org.eclipse.edc.connector.controlplane.transfer.dataplane.flow;
 
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowPropertiesProvider;
-import org.eclipse.edc.connector.controlplane.transfer.spi.flow.FlowTypeExtractor;
+import org.eclipse.edc.connector.controlplane.transfer.spi.flow.TransferTypeParser;
 import org.eclipse.edc.connector.controlplane.transfer.spi.types.DataFlowResponse;
 import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcess;
 import org.eclipse.edc.connector.dataplane.selector.spi.DataPlaneSelectorService;
@@ -26,11 +26,13 @@ import org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstan
 import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.spi.response.ResponseStatus;
 import org.eclipse.edc.spi.response.StatusResult;
+import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.result.ServiceResult;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowResponseMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -57,17 +59,17 @@ public class DataPlaneSignalingFlowControllerTest {
     private final DataPlaneClientFactory dataPlaneClientFactory = mock();
     private final DataPlaneSelectorService selectorService = mock();
     private final DataFlowPropertiesProvider propertiesProvider = mock();
-    private final FlowTypeExtractor flowTypeExtractor = mock();
+    private final TransferTypeParser transferTypeParser = mock();
 
     private final DataPlaneSignalingFlowController flowController = new DataPlaneSignalingFlowController(
             () -> URI.create("http://localhost"), selectorService, propertiesProvider, dataPlaneClientFactory,
-            "random", flowTypeExtractor);
+            "random", transferTypeParser);
 
     @Nested
     class CanHandle {
         @Test
         void shouldReturnTrue_whenFlowTypeIsValid() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PUSH));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PUSH)));
             var transferProcess = transferProcess("Custom", "Valid-PUSH");
 
             var result = flowController.canHandle(transferProcess);
@@ -77,7 +79,7 @@ public class DataPlaneSignalingFlowControllerTest {
 
         @Test
         void shouldReturnFalse_whenFlowTypeIsNotValid() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.failure(ResponseStatus.FATAL_ERROR));
+            when(transferTypeParser.parse(any())).thenReturn(Result.failure("cannot parse"));
             var transferProcess = transferProcess("Custom", "Invalid-ANY");
 
             var result = flowController.canHandle(transferProcess);
@@ -90,7 +92,7 @@ public class DataPlaneSignalingFlowControllerTest {
     class InitiateFlow {
         @Test
         void transferSuccess() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PULL));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PULL)));
             var source = testDataAddress();
             var policy = Policy.Builder.newInstance().assignee("participantId").build();
             var transferProcess = transferProcessBuilder()
@@ -124,7 +126,7 @@ public class DataPlaneSignalingFlowControllerTest {
 
         @Test
         void transferSuccess_withReturnedDataAddress() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PULL));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PULL)));
             var policy = Policy.Builder.newInstance().assignee("participantId").build();
             var transferProcess = transferProcessBuilder()
                     .transferType(HTTP_DATA_PULL)
@@ -150,7 +152,7 @@ public class DataPlaneSignalingFlowControllerTest {
 
         @Test
         void shouldFail_whenNoDataplaneSelected() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PULL));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PULL)));
             var transferProcess = transferProcessBuilder()
                     .contentDataAddress(testDataAddress())
                     .transferType(HTTP_DATA_PULL)
@@ -166,7 +168,7 @@ public class DataPlaneSignalingFlowControllerTest {
 
         @Test
         void invalidTransferType() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.failure(ResponseStatus.FATAL_ERROR, "error"));
+            when(transferTypeParser.parse(any())).thenReturn(Result.failure("cannot parse"));
             var transferProcess = transferProcessBuilder()
                     .contentDataAddress(testDataAddress())
                     .transferType("invalid")
@@ -174,12 +176,12 @@ public class DataPlaneSignalingFlowControllerTest {
 
             var result = flowController.start(transferProcess, Policy.Builder.newInstance().build());
 
-            assertThat(result).isFailed().messages().containsOnly("error");
+            assertThat(result).isFailed().detail().contains("cannot parse");
         }
 
         @Test
         void returnFailedResult_whenPropertiesResolveFails() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PULL));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PULL)));
             var errorMsg = "error";
             var transferProcess = transferProcessBuilder()
                     .contentDataAddress(testDataAddress())
@@ -195,7 +197,7 @@ public class DataPlaneSignalingFlowControllerTest {
 
         @Test
         void returnFailedResultIfTransferFails() {
-            when(flowTypeExtractor.extract(any())).thenReturn(StatusResult.success(FlowType.PULL));
+            when(transferTypeParser.parse(any())).thenReturn(Result.success(new TransferType("Valid", FlowType.PULL)));
             var errorMsg = "error";
             var transferProcess = transferProcessBuilder()
                     .contentDataAddress(testDataAddress())

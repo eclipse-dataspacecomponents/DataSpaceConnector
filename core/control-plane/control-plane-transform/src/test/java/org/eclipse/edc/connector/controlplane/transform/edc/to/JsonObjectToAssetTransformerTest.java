@@ -18,8 +18,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonBuilderFactory;
 import jakarta.json.JsonObjectBuilder;
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
-import org.eclipse.edc.connector.controlplane.transform.Payload;
-import org.eclipse.edc.connector.controlplane.transform.PayloadTransformer;
 import org.eclipse.edc.connector.controlplane.transform.TestInput;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.transform.TypeTransformerRegistryImpl;
@@ -29,6 +27,7 @@ import org.eclipse.edc.transform.transformer.edc.to.JsonValueToGenericTypeTransf
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +44,7 @@ import static org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset.PROP
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.CONTEXT;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VOCAB;
 import static org.eclipse.edc.jsonld.util.JacksonJsonLd.createObjectMapper;
 import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
@@ -71,8 +71,6 @@ class JsonObjectToAssetTransformerTest {
         typeTransformerRegistry.register(new JsonValueToGenericTypeTransformer(objectMapper));
         typeTransformerRegistry.register(transformer);
         typeTransformerRegistry.register(new JsonObjectToDataAddressTransformer());
-        typeTransformerRegistry.register(new PayloadTransformer());
-        typeTransformerRegistry.registerTypeAlias(EDC_NAMESPACE + "customPayload", Payload.class);
     }
 
     @Test
@@ -143,9 +141,10 @@ class JsonObjectToAssetTransformerTest {
         assertThat(asset).withFailMessage(asset::getFailureDetail).isSucceeded();
         assertThat(asset.getContent().getProperties())
                 .hasSize(6)
-                .hasEntrySatisfying(EDC_NAMESPACE + "payload", o -> assertThat(o).isInstanceOf(Payload.class)
-                        .hasFieldOrPropertyWithValue("age", CUSTOM_PAYLOAD_AGE)
-                        .hasFieldOrPropertyWithValue("name", CUSTOM_PAYLOAD_NAME));
+                .hasEntrySatisfying(EDC_NAMESPACE + "payload", o -> assertThat(o).asInstanceOf(map(String.class, Object.class))
+                        .containsEntry(EDC_NAMESPACE + "age", List.of(Map.of(VALUE, CUSTOM_PAYLOAD_AGE)))
+                        .containsEntry(EDC_NAMESPACE + "name", List.of(Map.of(VALUE, CUSTOM_PAYLOAD_NAME)))
+                );
     }
 
     @Test

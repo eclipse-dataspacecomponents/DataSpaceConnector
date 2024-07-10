@@ -35,7 +35,7 @@ import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferRequest
 import org.eclipse.edc.connector.spi.service.SecretService;
 import org.eclipse.edc.edr.spi.store.EndpointDataReferenceStore;
 import org.eclipse.edc.jsonld.spi.JsonLd;
-import org.eclipse.edc.junit.annotations.EndToEndTest;
+import org.eclipse.edc.junit.annotations.ComponentTest;
 import org.eclipse.edc.junit.extensions.RuntimeExtension;
 import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.policy.model.AndConstraint;
@@ -86,7 +86,7 @@ import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.util.io.Ports.getFreePort;
 import static org.mockito.Mockito.mock;
 
-@EndToEndTest
+@ComponentTest
 public class SerdeIntegrationTest {
 
     @RegisterExtension

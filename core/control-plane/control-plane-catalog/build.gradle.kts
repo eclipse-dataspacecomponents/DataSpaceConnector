@@ -22,7 +22,8 @@ dependencies {
     api(project(":spi:control-plane:transfer-spi"))
     api(project(":spi:control-plane:asset-spi"))
 
-    testImplementation(project(":tests:junit-base"));
+    implementation(project(":spi:common:data-address:data-address-http-data-spi"))
+    testImplementation(project(":tests:junit-base"))
 
     testImplementation(project(":core:common:connector-core"))
     testImplementation(project(":core:control-plane:control-plane-core"))

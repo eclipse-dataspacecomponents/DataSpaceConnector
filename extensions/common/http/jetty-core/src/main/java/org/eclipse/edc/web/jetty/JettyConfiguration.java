@@ -23,9 +23,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.eclipse.edc.web.spi.configuration.WebServiceConfigurer.WEB_HTTP_PREFIX;
+
 public class JettyConfiguration {
 
-    public static final String WEB_HTTP_PREFIX = "web.http";
     public static final String DEFAULT_PATH = "/api";
     public static final String DEFAULT_CONTEXT_NAME = "default";
     public static final int DEFAULT_PORT = 8181;

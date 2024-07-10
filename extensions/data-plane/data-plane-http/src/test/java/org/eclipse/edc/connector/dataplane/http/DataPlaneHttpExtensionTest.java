@@ -19,15 +19,18 @@ import org.eclipse.edc.connector.dataplane.http.spi.HttpDataAddress;
 import org.eclipse.edc.connector.dataplane.http.spi.HttpRequestParamsProvider;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.PipelineService;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult;
-import org.eclipse.edc.junit.extensions.EdcExtension;
+import org.eclipse.edc.junit.annotations.ComponentTest;
+import org.eclipse.edc.junit.extensions.RuntimeExtension;
+import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.HttpResponse;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
@@ -39,7 +42,7 @@ import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.stop.Stop.stopQuietly;
 
-@ExtendWith(EdcExtension.class)
+@ComponentTest
 public class DataPlaneHttpExtensionTest {
 
     private static ClientAndServer sourceServer;
@@ -47,9 +50,16 @@ public class DataPlaneHttpExtensionTest {
     private static final int SOURCE_PORT = getFreePort();
     private static final int DESTINATION_PORT = getFreePort();
 
+    @RegisterExtension
+    private static final RuntimeExtension RUNTIME = new RuntimePerClassExtension()
+            .setConfiguration(Map.of(
+                    "edc.transfer.proxy.token.verifier.publickey.alias", "alias",
+                    "edc.transfer.proxy.token.signer.privatekey.alias", "alias"
+            ))
+            .registerServiceMock(TransferProcessApiClient.class, mock());
+
     @BeforeAll
-    public static void setUp(EdcExtension extension) {
-        extension.registerServiceMock(TransferProcessApiClient.class, mock());
+    public static void setUp() {
         sourceServer = startClientAndServer(SOURCE_PORT);
         destinationServer = startClientAndServer(DESTINATION_PORT);
     }

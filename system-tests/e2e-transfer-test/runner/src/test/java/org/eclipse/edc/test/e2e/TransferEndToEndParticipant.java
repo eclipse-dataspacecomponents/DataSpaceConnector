@@ -16,10 +16,9 @@ package org.eclipse.edc.test.e2e;
 
 import io.restassured.common.mapper.TypeRef;
 import jakarta.json.Json;
-import jakarta.json.JsonObject;
+import org.assertj.core.api.ThrowingConsumer;
 import org.eclipse.edc.connector.controlplane.test.system.utils.Participant;
 import org.eclipse.edc.spi.types.domain.DataAddress;
-import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -33,6 +32,7 @@ import static io.restassured.http.ContentType.JSON;
 import static jakarta.json.Json.createArrayBuilder;
 import static jakarta.json.Json.createObjectBuilder;
 import static java.io.File.separator;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.boot.BootServicesExtension.PARTICIPANT_ID;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.CONTEXT;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
@@ -48,25 +48,14 @@ public class TransferEndToEndParticipant extends Participant {
     private final URI dataPlaneDefault = URI.create("http://localhost:" + getFreePort());
     private final URI dataPlaneControl = URI.create("http://localhost:" + getFreePort() + "/control");
     private final URI dataPlanePublic = URI.create("http://localhost:" + getFreePort() + "/public");
-    private final URI backendService = URI.create("http://localhost:" + getFreePort());
+    private final int httpProvisionerPort = getFreePort();
 
     protected TransferEndToEndParticipant() {
         super();
     }
 
-    /**
-     * Get private properties to configure a dynamic http receiver for EDR.
-     *
-     * @return the receiver properties.
-     */
-    public JsonObject dynamicReceiverPrivateProperties() {
-        return Json.createObjectBuilder()
-                .add("receiverHttpEndpoint", backendService + "/api/consumer/dataReference")
-                .build();
-    }
-
-    public URI backendService() {
-        return backendService;
+    public int getHttpProvisionerPort() {
+        return httpProvisionerPort;
     }
 
     /**
@@ -122,12 +111,8 @@ public class TransferEndToEndParticipant extends Participant {
                 put("web.http.control.port", String.valueOf(controlPlaneControl.getPort()));
                 put("web.http.control.path", controlPlaneControl.getPath());
                 put("edc.dsp.callback.address", protocolEndpoint.getUrl().toString());
-                put("edc.vault", resourceAbsolutePath(getName() + "-vault.properties"));
                 put("edc.keystore", resourceAbsolutePath("certs/cert.pfx"));
                 put("edc.keystore.password", "123456");
-                put("edc.receiver.http.endpoint", backendService + "/api/consumer/dataReference");
-                put("edc.transfer.proxy.token.signer.privatekey.alias", "1");
-                put("edc.transfer.proxy.token.verifier.publickey.alias", "public-key");
                 put("edc.transfer.proxy.endpoint", dataPlanePublic.toString());
                 put("edc.transfer.send.retry.limit", "1");
                 put("edc.transfer.send.retry.base-delay.ms", "100");
@@ -136,8 +121,12 @@ public class TransferEndToEndParticipant extends Participant {
                 put("edc.negotiation.consumer.send.retry.base-delay.ms", "100");
                 put("edc.negotiation.provider.send.retry.base-delay.ms", "100");
 
+                put("edc.negotiation.consumer.state-machine.iteration-wait-millis", "50");
+                put("edc.negotiation.provider.state-machine.iteration-wait-millis", "50");
+                put("edc.transfer.state-machine.iteration-wait-millis", "50");
+
                 put("provisioner.http.entries.default.provisioner.type", "provider");
-                put("provisioner.http.entries.default.endpoint", backendService + "/api/provision");
+                put("provisioner.http.entries.default.endpoint", "http://localhost:%d/provision".formatted(httpProvisionerPort));
                 put("provisioner.http.entries.default.data.address.type", "HttpProvision");
             }
         };
@@ -158,14 +147,14 @@ public class TransferEndToEndParticipant extends Participant {
                 put("web.http.public.path", "/public");
                 put("web.http.control.port", String.valueOf(dataPlaneControl.getPort()));
                 put("web.http.control.path", dataPlaneControl.getPath());
-                put("edc.vault", resourceAbsolutePath(getName() + "-vault.properties"));
                 put("edc.keystore", resourceAbsolutePath("certs/cert.pfx"));
                 put("edc.keystore.password", "123456");
                 put("edc.dataplane.api.public.baseurl", dataPlanePublic + "/v2/");
                 put("edc.dataplane.token.validation.endpoint", controlPlaneControl + "/token");
-                put("edc.transfer.proxy.token.signer.privatekey.alias", "1");
+                put("edc.transfer.proxy.token.signer.privatekey.alias", "private-key");
                 put("edc.transfer.proxy.token.verifier.publickey.alias", "public-key");
                 put("edc.dataplane.http.sink.partition.size", "1");
+                put("edc.dataplane.state-machine.iteration-wait-millis", "50");
                 put("edc.dpf.selector.url", controlPlaneControl + "/v1/dataplanes");
             }
         };
@@ -181,14 +170,6 @@ public class TransferEndToEndParticipant extends Participant {
         var baseConfiguration = dataPlaneConfiguration();
         baseConfiguration.putAll(defaultDatasourceConfiguration(getName()));
         return baseConfiguration;
-    }
-
-    public Map<String, String> backendServiceConfiguration() {
-        return new HashMap<>() {
-            {
-                put("web.http.port", String.valueOf(backendService.getPort()));
-            }
-        };
     }
 
     /**
@@ -221,10 +202,10 @@ public class TransferEndToEndParticipant extends Participant {
      *
      * @param edr         endpoint data reference
      * @param queryParams query parameters
-     * @param bodyMatcher matcher for response body
+     * @param bodyAssertion assertion to be verified on the body
      */
-    public void pullData(DataAddress edr, Map<String, String> queryParams, Matcher<String> bodyMatcher) {
-        given()
+    public void pullData(DataAddress edr, Map<String, String> queryParams, ThrowingConsumer<String> bodyAssertion) {
+        var data = given()
                 .baseUri(edr.getStringProperty("endpoint"))
                 .header("Authorization", edr.getStringProperty("authorization"))
                 .queryParams(queryParams)
@@ -233,7 +214,9 @@ public class TransferEndToEndParticipant extends Participant {
                 .then()
                 .log().ifError()
                 .statusCode(200)
-                .body("message", bodyMatcher);
+                .extract().body().asString();
+
+        assertThat(data).satisfies(bodyAssertion);
     }
 
     @NotNull

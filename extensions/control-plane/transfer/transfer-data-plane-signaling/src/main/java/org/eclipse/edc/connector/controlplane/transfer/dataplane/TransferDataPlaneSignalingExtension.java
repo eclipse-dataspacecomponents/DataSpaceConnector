@@ -17,7 +17,7 @@ package org.eclipse.edc.connector.controlplane.transfer.dataplane;
 import org.eclipse.edc.connector.controlplane.transfer.dataplane.flow.DataPlaneSignalingFlowController;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowManager;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowPropertiesProvider;
-import org.eclipse.edc.connector.controlplane.transfer.spi.flow.FlowTypeExtractor;
+import org.eclipse.edc.connector.controlplane.transfer.spi.flow.TransferTypeParser;
 import org.eclipse.edc.connector.dataplane.selector.spi.DataPlaneSelectorService;
 import org.eclipse.edc.connector.dataplane.selector.spi.client.DataPlaneClientFactory;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
@@ -58,13 +58,13 @@ public class TransferDataPlaneSignalingExtension implements ServiceExtension {
     private DataFlowPropertiesProvider propertiesProvider;
 
     @Inject
-    private FlowTypeExtractor flowTypeExtractor;
+    private TransferTypeParser transferTypeParser;
 
     @Override
     public void initialize(ServiceExtensionContext context) {
         var selectionStrategy = context.getSetting(DPF_SELECTOR_STRATEGY, DEFAULT_DATAPLANE_SELECTOR_STRATEGY);
         var controller = new DataPlaneSignalingFlowController(callbackUrl, selectorService, getPropertiesProvider(),
-                clientFactory, selectionStrategy, flowTypeExtractor);
+                clientFactory, selectionStrategy, transferTypeParser);
         dataFlowManager.register(controller);
     }
 

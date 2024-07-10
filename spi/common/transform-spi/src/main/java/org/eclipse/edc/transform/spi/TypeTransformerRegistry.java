@@ -58,31 +58,4 @@ public interface TypeTransformerRegistry {
      */
     <INPUT, OUTPUT> Result<OUTPUT> transform(@NotNull INPUT input, @NotNull Class<OUTPUT> outputType);
 
-    /**
-     * Returns a registered type alias for the schema type.
-     * <em>Optional: may not be supported by every implementation!</em>
-     */
-    default Class<?> typeAlias(String type) {
-        return null;
-    }
-
-    /**
-     * Returns a registered type alias for the schema type or the default alias if none is registered.
-     * <em>Optional: may not be supported by every implementation!</em>
-     */
-    default Class<?> typeAlias(String type, Class<?> defaultType) {
-        return defaultType;
-    }
-
-    /**
-     * Registers a type alias for a given {@code Class<?>}. That means, from that point forward a particular {@link TypeTransformer}
-     * can be resolved either by its {@code INPUT} and {@code OUTPUT} types, or by the alias.
-     * <em>Optional: may not be supported by every implementation!</em>
-     *
-     * @param alias Any arbitrary string
-     * @param type  the class to be aliased
-     */
-    default void registerTypeAlias(String alias, Class<?> type) {
-
-    }
 }

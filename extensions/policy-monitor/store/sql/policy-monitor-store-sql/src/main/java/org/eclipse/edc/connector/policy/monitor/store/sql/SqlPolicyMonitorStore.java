@@ -74,7 +74,7 @@ public class SqlPolicyMonitorStore extends AbstractSqlStore implements PolicyMon
     public @NotNull List<PolicyMonitorEntry> nextNotLeased(int max, Criterion... criteria) {
         return transactionContext.execute(() -> {
             var filter = Arrays.stream(criteria).collect(toList());
-            var querySpec = QuerySpec.Builder.newInstance().filter(filter).limit(max).build();
+            var querySpec = QuerySpec.Builder.newInstance().filter(filter).sortField("stateTimestamp").limit(max).build();
             var statement = statements.createQuery(querySpec)
                     .addWhereClause(statements.getNotLeasedFilter(), clock.millis());
 

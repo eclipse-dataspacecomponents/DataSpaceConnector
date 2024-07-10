@@ -17,9 +17,10 @@ package org.eclipse.edc.connector.dataplane.util.sink;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.DataSink;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.DataSource;
+import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamFailure;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult;
+import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.monitor.Monitor;
-import org.eclipse.edc.spi.result.AbstractResult;
 import org.eclipse.edc.spi.telemetry.Telemetry;
 import org.eclipse.edc.util.stream.PartitionIterator;
 import org.jetbrains.annotations.NotNull;
@@ -30,10 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
-import static java.lang.String.format;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult.failure;
 import static org.eclipse.edc.util.async.AsyncUtils.asyncAllOf;
 
 /**
@@ -49,28 +47,26 @@ public abstract class ParallelSink implements DataSink {
     @WithSpan
     @Override
     public CompletableFuture<StreamResult<Object>> transfer(DataSource source) {
-        try {
-            var streamResult = source.openPartStream();
-            if (streamResult.failed()) {
-                return completedFuture(failure(streamResult.getFailure()));
-            }
-
-            try (var partStream = streamResult.getContent()) {
-                return PartitionIterator.streamOf(partStream, partitionSize)
-                        .map(this::processPartsAsync)
-                        .collect(asyncAllOf())
-                        .thenApply(results -> results.stream()
-                                .filter(AbstractResult::failed)
-                                .findFirst()
-                                .map(r -> StreamResult.<Object>error(String.join(",", r.getFailureMessages())))
-                                .orElseGet(this::complete))
-                        .exceptionally(throwable -> StreamResult.error("Unhandled exception raised when transferring data: " + throwable.getMessage()));
-            }
-        } catch (Exception e) {
-            var errorMessage = format("Error processing data transfer request - Request ID: %s", requestId);
-            monitor.severe(errorMessage, e);
-            return CompletableFuture.completedFuture(StreamResult.error(errorMessage));
-        }
+        return supplyAsync(() -> source.openPartStream().orElseThrow(StreamException::new), executorService)
+                .thenCompose(parts -> {
+                    try (parts) {
+                        return PartitionIterator.streamOf(parts, partitionSize)
+                                .map(this::processPartsAsync)
+                                .collect(asyncAllOf())
+                                .thenApply(results -> results.stream()
+                                        .filter(StreamResult::failed)
+                                        .findFirst()
+                                        .map(r -> StreamResult.failure(r.getFailure()))
+                                        .orElseGet(this::complete));
+                    }
+                })
+                .exceptionally(throwable -> {
+                    if (throwable instanceof StreamException streamException) {
+                        return StreamResult.failure(streamException.failure);
+                    } else {
+                        return StreamResult.error("Error processing data transfer request - Request ID: %s. Message: %s".formatted(requestId, throwable.getMessage()));
+                    }
+                });
     }
 
     @NotNull
@@ -93,6 +89,16 @@ public abstract class ParallelSink implements DataSink {
      */
     protected StreamResult<Object> complete() {
         return StreamResult.success();
+    }
+
+    private static class StreamException extends EdcException {
+
+        private final StreamFailure failure;
+
+        StreamException(StreamFailure failure) {
+            super(failure.getFailureDetail());
+            this.failure = failure;
+        }
     }
 
     protected abstract static class Builder<B extends Builder<B, T>, T extends ParallelSink> {

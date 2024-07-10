@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.UUID;
 
 import static java.util.stream.IntStream.range;
@@ -170,6 +171,23 @@ public abstract class PolicyMonitorStoreTestBase {
 
             var thirdLeased = getStore().nextNotLeased(1, hasState(STARTED.code()));
             assertThat(thirdLeased).hasSize(1);
+        }
+
+        @Test
+        void shouldLeaseOrderByStateTimestamp() {
+
+            var all = range(0, 10)
+                    .mapToObj(i -> createPolicyMonitorEntry("id-" + i, STARTED))
+                    .peek(getStore()::save)
+                    .toList();
+
+            all.stream().limit(5)
+                    .peek(this::delayByTenMillis)
+                    .sorted(Comparator.comparing(PolicyMonitorEntry::getStateTimestamp).reversed())
+                    .forEach(f -> getStore().save(f));
+
+            var elements = getStore().nextNotLeased(10, hasState(STARTED.code()));
+            assertThat(elements).hasSize(10).extracting(PolicyMonitorEntry::getStateTimestamp).isSorted();
         }
 
         private void delayByTenMillis(StatefulEntity<?> t) {

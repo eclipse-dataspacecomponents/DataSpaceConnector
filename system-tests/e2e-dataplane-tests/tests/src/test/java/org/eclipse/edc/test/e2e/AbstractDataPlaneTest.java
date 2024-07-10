@@ -14,24 +14,28 @@
 
 package org.eclipse.edc.test.e2e;
 
-import org.eclipse.edc.junit.extensions.EdcRuntimeExtension;
+import org.eclipse.edc.junit.extensions.EmbeddedRuntime;
+import org.eclipse.edc.junit.extensions.RuntimeExtension;
+import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.junit.testfixtures.TestUtils;
 import org.eclipse.edc.spi.security.Vault;
 import org.eclipse.edc.test.e2e.participant.DataPlaneParticipant;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public abstract class AbstractDataPlaneTest {
+
     protected static final DataPlaneParticipant DATAPLANE = DataPlaneParticipant.Builder.newInstance()
             .name("provider")
             .id("urn:connector:provider")
             .build();
+
     @RegisterExtension
-    protected static EdcRuntimeExtension runtime =
-            new EdcRuntimeExtension(
-                    ":system-tests:e2e-dataplane-tests:runtimes:data-plane",
+    protected static RuntimeExtension runtime =
+            new RuntimePerClassExtension(new EmbeddedRuntime(
                     "data-plane",
-                    DATAPLANE.dataPlaneConfiguration()
-            );
+                    DATAPLANE.dataPlaneConfiguration(),
+                    ":system-tests:e2e-dataplane-tests:runtimes:data-plane"
+            ));
 
     protected void seedVault() {
         var vault = runtime.getService(Vault.class);
@@ -41,7 +45,5 @@ public abstract class AbstractDataPlaneTest {
 
         var publicKey = TestUtils.getResourceFileContentAsString("certs/cert.pem");
         vault.storeSecret("public-key", publicKey);
-
-        vault.storeSecret("provision-oauth-secret", "supersecret");
     }
 }

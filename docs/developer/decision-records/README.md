@@ -56,3 +56,5 @@
 - [2023-12-19 Token Handling Refactor](./2023-12-19-token-handling-refactor/)
 - [2024-01-12 Dynamic Constraint Functions](./2024-01-12-dynamic-constraint-functions/)
 - [2024-05-24 Dataplane Selection Improvements](./2024-05-24-dataplane-selection-improvements/)
+- [2024-06-24 Api Authentication Configuration](./2024-06-24-api-authentication-configuration/)
+- [2024-07-03 Additional CatalogRequest scope parameter](./2024-07-03-additional-catalogrequest-param/)

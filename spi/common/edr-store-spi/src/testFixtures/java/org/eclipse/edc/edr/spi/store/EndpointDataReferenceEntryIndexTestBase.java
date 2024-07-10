@@ -18,6 +18,7 @@ import org.eclipse.edc.edr.spi.TestFunctions;
 import org.eclipse.edc.edr.spi.types.EndpointDataReferenceEntry;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
+import org.eclipse.edc.spi.query.SortOrder;
 import org.eclipse.edc.spi.result.StoreFailure;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import java.util.Comparator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -116,6 +118,20 @@ public abstract class EndpointDataReferenceEntryIndexTestBase {
 
         assertThat(results.succeeded()).isTrue();
         assertThat(results.getContent()).usingRecursiveFieldByFieldElementComparator().containsOnly(entry);
+
+    }
+
+    @Test
+    void query_withOrderBy() {
+        IntStream.range(0, 10)
+                .mapToObj(i -> TestFunctions.edrEntry("assetId" + i, "agreementId" + i, "tpId" + i, "cnId" + i))
+                .forEach(entry -> getStore().save(entry));
+
+        var results = getStore().query(QuerySpec.Builder.newInstance().sortField("createdAt").sortOrder(SortOrder.DESC).build());
+
+        assertThat(results.succeeded()).isTrue();
+        assertThat(results.getContent())
+                .isSortedAccordingTo(Comparator.comparing(EndpointDataReferenceEntry::getCreatedAt).reversed());
 
     }
 

@@ -23,7 +23,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static com.nimbusds.jose.jwk.source.JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE;
+import static org.eclipse.edc.api.auth.delegated.DelegatedAuthenticationExtension.AUTH_CACHE_VALIDITY_MS;
+import static org.eclipse.edc.api.auth.delegated.DelegatedAuthenticationExtension.AUTH_KEY_URL;
 import static org.eclipse.edc.api.auth.delegated.DelegatedAuthenticationExtension.AUTH_SETTING_KEY_URL;
+import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -64,5 +68,21 @@ class DelegatedAuthenticationExtensionTest {
 
         verify(monitor).warning("The '%s' setting was not provided, so the DelegatedAuthenticationService will NOT be registered. In this case, the TokenBasedAuthenticationService usually acts as fallback.".formatted(AUTH_SETTING_KEY_URL));
         verify(registry, never()).register(eq("management-api"), isA(DelegatedAuthenticationService.class));
+    }
+
+    @Test
+    public void delegatedProvider(DelegatedAuthenticationExtension extension) {
+
+        var config = mock(Config.class);
+
+        when(config.getString(AUTH_KEY_URL)).thenReturn("http://url");
+
+        assertThat(extension.delegatedProvider(monitor, config))
+                .isSucceeded().isInstanceOf(DelegatedAuthenticationService.class);
+
+
+        verify(config).getString(AUTH_KEY_URL);
+        verify(config).getLong(AUTH_CACHE_VALIDITY_MS, DEFAULT_CACHE_TIME_TO_LIVE);
+
     }
 }

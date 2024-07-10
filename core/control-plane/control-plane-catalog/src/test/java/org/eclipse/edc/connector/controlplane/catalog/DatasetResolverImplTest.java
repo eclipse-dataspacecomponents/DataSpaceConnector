@@ -18,6 +18,7 @@ package org.eclipse.edc.connector.controlplane.catalog;
 import org.assertj.core.api.iterable.ThrowingExtractor;
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.asset.spi.index.AssetIndex;
+import org.eclipse.edc.connector.controlplane.catalog.spi.Catalog;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DataService;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DatasetResolver;
@@ -28,12 +29,14 @@ import org.eclipse.edc.connector.controlplane.contract.spi.offer.ContractDefinit
 import org.eclipse.edc.connector.controlplane.contract.spi.types.offer.ContractDefinition;
 import org.eclipse.edc.connector.controlplane.policy.spi.PolicyDefinition;
 import org.eclipse.edc.connector.controlplane.policy.spi.store.PolicyDefinitionStore;
+import org.eclipse.edc.dataaddress.httpdata.spi.HttpDataAddressSchema;
 import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
 import org.eclipse.edc.spi.agent.ParticipantAgent;
 import org.eclipse.edc.spi.message.Range;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
+import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -217,6 +220,37 @@ class DatasetResolverImplTest {
         assertThat(datasets).hasSize(2)
                 .allSatisfy(dataset -> assertThat(dataset.getOffers()).hasSize(2))
                 .map(getId()).containsExactly("6", "7");
+    }
+
+    @Test
+    void query_shouldReturnCatalogWithinCatalog_whenAssetIsCatalogAsset() {
+        var contractDefinition = contractDefinitionBuilder("definitionId").contractPolicyId("contractPolicyId").build();
+        var contractPolicy = Policy.Builder.newInstance().build();
+        var distribution = Distribution.Builder.newInstance().dataService(DataService.Builder.newInstance()
+                        .endpointDescription("test-asset-desc")
+                        .endpointUrl("https://foo.bar/baz")
+                        .build())
+                .format(HttpDataAddressSchema.HTTP_DATA_TYPE).build();
+
+        when(contractDefinitionResolver.definitionsFor(any())).thenReturn(Stream.of(contractDefinition));
+        when(assetIndex.queryAssets(isA(QuerySpec.class))).thenReturn(Stream.of(createAsset("assetId")
+                .property(Asset.PROPERTY_IS_CATALOG, true)
+                .dataAddress(DataAddress.Builder.newInstance().type(HttpDataAddressSchema.HTTP_DATA_TYPE).build())
+                .build()));
+        when(policyStore.findById("contractPolicyId")).thenReturn(PolicyDefinition.Builder.newInstance().policy(contractPolicy).build());
+        when(distributionResolver.getDistributions(isA(Asset.class))).thenReturn(List.of(distribution));
+
+        var datasets = datasetResolver.query(createParticipantAgent(), QuerySpec.none());
+
+        assertThat(datasets).isNotNull().hasSize(1).first().satisfies(dataset -> {
+            assertThat(dataset).isInstanceOf(Catalog.class);
+            assertThat(dataset.getId()).isEqualTo("assetId");
+            assertThat(dataset.getOffers()).hasSize(1).allSatisfy((id, policy) -> {
+                assertThat(ContractOfferId.parseId(id)).isSucceeded().extracting(ContractOfferId::definitionPart).asString().isEqualTo("definitionId");
+                assertThat(policy.getType()).isEqualTo(OFFER);
+                assertThat(policy.getTarget()).isEqualTo(null);
+            });
+        });
     }
 
     @Test

@@ -59,21 +59,6 @@ public interface TransformerContext {
     @Nullable <INPUT, OUTPUT> OUTPUT transform(INPUT input, Class<OUTPUT> outputType);
 
     /**
-     * Returns a registered type alias for the schema type.
-     */
-    @Nullable
-    default Class<?> typeAlias(String type) {
-        return null;
-    }
-
-    /**
-     * Returns a registered type alias for the schema type or the default alias if none is registered.
-     */
-    default Class<?> typeAlias(String type, Class<?> defaultType) {
-        return defaultType;
-    }
-
-    /**
      * Set context data to be consumed by the transformer operating on type.
      *
      * @param type the type of the transformer that will consume the data.

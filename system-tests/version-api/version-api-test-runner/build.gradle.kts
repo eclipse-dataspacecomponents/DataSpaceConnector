@@ -35,13 +35,13 @@ dependencies {
     //we need the JacksonJsonLd util class
     testImplementation(project(":core:common:lib:json-ld-lib"))
     testImplementation(project(":extensions:common:json-ld"))
-    testImplementation(project(":extensions:common:api:control-api-configuration"))
 
     testImplementation(libs.restAssured)
     testImplementation(libs.assertj)
     testImplementation(libs.awaitility)
     testImplementation(libs.junit.jupiter.api)
     testImplementation(testFixtures(project(":extensions:common:sql:sql-core")))
+    testImplementation(project(":extensions:common:transaction:transaction-local"))
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.testcontainers.postgres)
 }

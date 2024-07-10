@@ -26,7 +26,6 @@ import org.eclipse.edc.spi.entity.StatefulEntity;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.response.StatusResult;
 import org.eclipse.edc.spi.result.Result;
-import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowResponseMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
@@ -78,24 +77,21 @@ public class DataPlaneManagerImpl extends AbstractStateEntityManager<DataFlow, D
 
     @Override
     public Result<DataFlowResponseMessage> start(DataFlowStartMessage startMessage) {
-        var dataFlowBuilder = dataFlowRequestBuilder(startMessage);
+        var dataFlowBuilder = DataFlow.Builder.newInstance()
+                .id(startMessage.getProcessId())
+                .source(startMessage.getSourceDataAddress())
+                .destination(startMessage.getDestinationDataAddress())
+                .callbackAddress(startMessage.getCallbackAddress())
+                .traceContext(telemetry.getCurrentTraceContext())
+                .properties(startMessage.getProperties())
+                .transferType(startMessage.getTransferType());
 
-        var result = switch (startMessage.getFlowType()) {
-            case PULL -> handleStartPull(startMessage, dataFlowBuilder);
-            case PUSH -> handleStartPush(dataFlowBuilder);
+        var response = switch (startMessage.getFlowType()) {
+            case PULL -> handlePull(startMessage, dataFlowBuilder);
+            case PUSH -> handlePush(dataFlowBuilder);
         };
 
-        if (result.failed()) {
-            return result.mapTo();
-        }
-
-        var response = DataFlowResponseMessage.Builder.newInstance()
-                .dataAddress(result.getContent().orElse(null))
-                .build();
-
-        update(dataFlowBuilder.build());
-
-        return Result.success(response);
+        return response.onSuccess(m -> update(dataFlowBuilder.build()));
     }
 
     @Override
@@ -144,7 +140,7 @@ public class DataPlaneManagerImpl extends AbstractStateEntityManager<DataFlow, D
 
         var dataFlow = result.getContent();
 
-        if (FlowType.PUSH.equals(dataFlow.getFlowType())) {
+        if (FlowType.PUSH.equals(dataFlow.getTransferType().flowType())) {
             var transferService = transferServiceRegistry.resolveTransferService(dataFlow.toRequest());
 
             if (transferService == null) {
@@ -169,31 +165,21 @@ public class DataPlaneManagerImpl extends AbstractStateEntityManager<DataFlow, D
         return StatusResult.success(dataFlow);
     }
 
-    private Result<Optional<DataAddress>> handleStartPush(DataFlow.Builder dataFlowBuilder) {
+    private Result<DataFlowResponseMessage> handlePull(DataFlowStartMessage startMessage, DataFlow.Builder dataFlowBuilder) {
+        return authorizationService.createEndpointDataReference(startMessage)
+                .onSuccess(dataAddress -> dataFlowBuilder.state(STARTED.code()))
+                .onFailure(f -> monitor.warning("Error obtaining EDR DataAddress: %s".formatted(f.getFailureDetail())))
+                .map(dataAddress -> DataFlowResponseMessage.Builder.newInstance()
+                        .dataAddress(dataAddress)
+                        .build());
+    }
+
+    private Result<DataFlowResponseMessage> handlePush(DataFlow.Builder dataFlowBuilder) {
         dataFlowBuilder.state(RECEIVED.code());
-        return Result.success(Optional.empty());
-    }
 
-    private Result<Optional<DataAddress>> handleStartPull(DataFlowStartMessage startMessage, DataFlow.Builder dataFlowBuilder) {
-        var dataAddressResult = authorizationService.createEndpointDataReference(startMessage)
-                .onFailure(f -> monitor.warning("Error obtaining EDR DataAddress: %s".formatted(f.getFailureDetail())));
-
-        if (dataAddressResult.failed()) {
-            return dataAddressResult.mapTo();
-        }
-        dataFlowBuilder.state(STARTED.code());
-        return Result.success(Optional.of(dataAddressResult.getContent()));
-    }
-
-    private DataFlow.Builder dataFlowRequestBuilder(DataFlowStartMessage startMessage) {
-        return DataFlow.Builder.newInstance()
-                .id(startMessage.getProcessId())
-                .source(startMessage.getSourceDataAddress())
-                .destination(startMessage.getDestinationDataAddress())
-                .callbackAddress(startMessage.getCallbackAddress())
-                .traceContext(telemetry.getCurrentTraceContext())
-                .properties(startMessage.getProperties())
-                .flowType(startMessage.getFlowType());
+        return Result.success(DataFlowResponseMessage.Builder.newInstance()
+                .dataAddress(null)
+                .build());
     }
 
     private boolean processReceived(DataFlow dataFlow) {
@@ -281,6 +267,7 @@ public class DataPlaneManagerImpl extends AbstractStateEntityManager<DataFlow, D
             return this;
         }
 
+        @Override
         public DataPlaneManagerImpl build() {
             Objects.requireNonNull(manager.transferProcessClient);
             return manager;

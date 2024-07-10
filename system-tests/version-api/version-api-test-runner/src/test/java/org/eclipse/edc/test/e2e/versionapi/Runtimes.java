@@ -17,7 +17,9 @@ package org.eclipse.edc.test.e2e.versionapi;
 import org.eclipse.edc.connector.dataplane.spi.manager.DataPlaneManager;
 import org.eclipse.edc.iam.identitytrust.sts.spi.service.StsClientService;
 import org.eclipse.edc.iam.identitytrust.sts.spi.service.StsClientTokenGeneratorService;
-import org.eclipse.edc.junit.extensions.EdcRuntimeExtension;
+import org.eclipse.edc.junit.extensions.EmbeddedRuntime;
+import org.eclipse.edc.junit.extensions.RuntimeExtension;
+import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.sql.testfixtures.PostgresqlEndToEndInstance;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,12 +30,8 @@ import static org.mockito.Mockito.mock;
 
 public interface Runtimes {
 
-    static EdcRuntimeExtension inMemoryRuntime() {
-        var rt = new EdcRuntimeExtension(
-                "control-plane",
-                inMemoryConfiguration(),
-                ":system-tests:version-api:version-api-test-runtime"
-        );
+    static RuntimeExtension inMemoryRuntime() {
+        var rt = new RuntimePerClassExtension(new EmbeddedRuntime("control-plane", inMemoryConfiguration(), ":system-tests:version-api:version-api-test-runtime"));
         rt.registerServiceMock(DataPlaneManager.class, mock());
         rt.registerServiceMock(StsClientService.class, mock());
         rt.registerServiceMock(StsClientTokenGeneratorService.class, mock());

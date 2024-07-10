@@ -23,7 +23,9 @@ import org.eclipse.edc.connector.dataplane.http.spi.HttpDataAddress;
 import org.eclipse.edc.connector.dataplane.spi.DataFlowStates;
 import org.eclipse.edc.connector.dataplane.spi.schema.DataFlowRequestSchema;
 import org.eclipse.edc.junit.annotations.ComponentTest;
-import org.eclipse.edc.junit.extensions.EdcRuntimeExtension;
+import org.eclipse.edc.junit.extensions.EmbeddedRuntime;
+import org.eclipse.edc.junit.extensions.RuntimeExtension;
+import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.junit.jupiter.api.AfterAll;
@@ -104,15 +106,17 @@ public class DataPlaneHttpIntegrationTests {
     private static ClientAndServer validationApiMockServer;
     private final Duration timeout = Duration.ofSeconds(30);
 
-    @RegisterExtension
-    static EdcRuntimeExtension dataPlane = new EdcRuntimeExtension(
+    private static final EmbeddedRuntime RUNTIME = new EmbeddedRuntime(
             "data-plane-server",
             Map.of(
                     "web.http.public.port", valueOf(PUBLIC_API_PORT),
                     "web.http.public.path", PUBLIC_PATH,
                     "web.http.control.port", valueOf(CONTROL_API_PORT),
                     "web.http.control.path", CONTROL_PATH,
-                    "edc.dataplane.token.validation.endpoint", VALIDATION_API_HOST
+                    "edc.dataplane.token.validation.endpoint", VALIDATION_API_HOST,
+                    "edc.transfer.proxy.token.verifier.publickey.alias", "alias",
+                    "edc.transfer.proxy.token.signer.privatekey.alias", "alias",
+                    "edc.core.retry.retries.max", "0"
             ),
             ":extensions:common:metrics:micrometer-core",
             ":core:data-plane:data-plane-core",
@@ -149,6 +153,10 @@ public class DataPlaneHttpIntegrationTests {
 
     @Nested
     class Pull {
+
+        @RegisterExtension
+        static RuntimeExtension dataPlane = new RuntimePerClassExtension(RUNTIME);
+
         @Test
         void transfer_pull_withSourceQueryParamsAndPath_success(TypeManager typeManager) {
             // prepare data source and validation servers
@@ -227,6 +235,10 @@ public class DataPlaneHttpIntegrationTests {
 
     @Nested
     class Push {
+
+        @RegisterExtension
+        static RuntimeExtension dataPlane = new RuntimePerClassExtension(RUNTIME);
+
         @Test
         void transfer_toHttpSink_success(TypeManager typeManager) {
             var body = UUID.randomUUID().toString();

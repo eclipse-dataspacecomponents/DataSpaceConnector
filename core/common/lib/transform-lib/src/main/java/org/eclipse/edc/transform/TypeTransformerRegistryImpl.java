@@ -66,21 +66,6 @@ public class TypeTransformerRegistryImpl implements TypeTransformerRegistry {
         }
     }
 
-    @Override
-    public Class<?> typeAlias(String type) {
-        return aliases.get(type);
-    }
-
-    @Override
-    public Class<?> typeAlias(String type, Class<?> defaultType) {
-        return aliases.getOrDefault(type, defaultType);
-    }
-
-    @Override
-    public void registerTypeAlias(String alias, Class<?> type) {
-        aliases.put(alias, type);
-    }
-
     private static class ContextTransformerRegistry extends TypeTransformerRegistryImpl {
 
         private final TypeTransformerRegistry parent;

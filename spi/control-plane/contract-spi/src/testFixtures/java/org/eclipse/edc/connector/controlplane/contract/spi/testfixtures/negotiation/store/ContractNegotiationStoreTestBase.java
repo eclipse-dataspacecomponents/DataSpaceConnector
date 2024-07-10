@@ -26,6 +26,7 @@ import org.eclipse.edc.policy.model.LiteralExpression;
 import org.eclipse.edc.policy.model.Operator;
 import org.eclipse.edc.policy.model.Permission;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.spi.entity.StatefulEntity;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.query.SortOrder;
@@ -63,8 +64,18 @@ import static org.eclipse.edc.spi.result.StoreFailure.Reason.NOT_FOUND;
 public abstract class ContractNegotiationStoreTestBase {
 
     protected static final String CONNECTOR_NAME = "test-connector";
-    protected final Clock clock = Clock.systemUTC();
     private static final String ASSET_ID = "TEST_ASSET_ID";
+    protected final Clock clock = Clock.systemUTC();
+
+    protected abstract ContractNegotiationStore getContractNegotiationStore();
+
+    protected abstract void leaseEntity(String negotiationId, String owner, Duration duration);
+
+    protected void leaseEntity(String negotiationId, String owner) {
+        leaseEntity(negotiationId, owner, Duration.ofSeconds(60));
+    }
+
+    protected abstract boolean isLeasedBy(String negotiationId, String owner);
 
     @Nested
     class FindById {
@@ -800,6 +811,32 @@ public abstract class ContractNegotiationStoreTestBase {
 
             assertThat(list1).isNotEqualTo(list2).doesNotContainAnyElementsOf(list2);
         }
+
+        @Test
+        void shouldLeaseOrderByStateTimestamp() {
+
+            var all = range(0, 10)
+                    .mapToObj(i -> createNegotiation("id-" + i))
+                    .peek(getContractNegotiationStore()::save)
+                    .toList();
+
+            all.stream().limit(5)
+                    .peek(this::delayByTenMillis)
+                    .sorted(Comparator.comparing(ContractNegotiation::getStateTimestamp).reversed())
+                    .forEach(f -> getContractNegotiationStore().save(f));
+
+            var elements = getContractNegotiationStore().nextNotLeased(10, hasState(REQUESTED.code()));
+            assertThat(elements).hasSize(10).extracting(ContractNegotiation::getStateTimestamp).isSorted();
+        }
+
+        private void delayByTenMillis(StatefulEntity<?> t) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ignored) {
+                // noop
+            }
+            t.updateStateTimestamp();
+        }
     }
 
     @Nested
@@ -868,15 +905,5 @@ public abstract class ContractNegotiationStoreTestBase {
             assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(ALREADY_LEASED);
         }
     }
-
-    protected abstract ContractNegotiationStore getContractNegotiationStore();
-
-    protected abstract void leaseEntity(String negotiationId, String owner, Duration duration);
-
-    protected void leaseEntity(String negotiationId, String owner) {
-        leaseEntity(negotiationId, owner, Duration.ofSeconds(60));
-    }
-
-    protected abstract boolean isLeasedBy(String negotiationId, String owner);
 
 }

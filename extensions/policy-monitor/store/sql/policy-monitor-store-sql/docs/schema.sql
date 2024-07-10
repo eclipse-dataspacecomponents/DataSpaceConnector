@@ -30,3 +30,7 @@ CREATE TABLE IF NOT EXISTS edc_policy_monitor
     properties           JSON,
     contract_id          VARCHAR
 );
+
+
+-- This will help to identify states that need to be transitioned without a table scan when the entries grow
+CREATE INDEX IF NOT EXISTS policy_monitor_state ON edc_policy_monitor (state,state_time_stamp);

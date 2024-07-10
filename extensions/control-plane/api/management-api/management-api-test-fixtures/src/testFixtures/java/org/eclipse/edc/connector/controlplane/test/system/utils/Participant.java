@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.connector.controlplane.test.system.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.specification.RequestSpecification;
 import jakarta.json.Json;
@@ -243,7 +244,6 @@ public class Participant {
      * @return dataset.
      */
     public JsonObject getDatasetForAsset(Participant provider, String assetId) {
-        var datasetReference = new AtomicReference<JsonObject>();
         var requestBody = createObjectBuilder()
                 .add(CONTEXT, createObjectBuilder().add(VOCAB, EDC_NAMESPACE))
                 .add(TYPE, "DatasetRequest")
@@ -253,25 +253,24 @@ public class Participant {
                 .add("protocol", protocol)
                 .build();
 
-        await().atMost(timeout).untilAsserted(() -> {
-            var response = managementEndpoint.baseRequest()
-                    .contentType(JSON)
-                    .when()
-                    .body(requestBody)
-                    .post("/v3/catalog/dataset/request")
-                    .then()
-                    .log().ifError()
-                    .statusCode(200)
-                    .extract().body().asString();
+        var response = managementEndpoint.baseRequest()
+                .contentType(JSON)
+                .when()
+                .body(requestBody)
+                .post("/v3/catalog/dataset/request")
+                .then()
+                .statusCode(200)
+                .contentType(JSON)
+                .log().ifValidationFails()
+                .extract();
 
-            var compacted = objectMapper.readValue(response, JsonObject.class);
-
-            var dataset = jsonLd.expand(compacted).orElseThrow(f -> new EdcException(f.getFailureDetail()));
-
-            datasetReference.set(dataset);
-        });
-
-        return datasetReference.get();
+        try {
+            var responseBody = response.body().asString();
+            var compacted = objectMapper.readValue(responseBody, JsonObject.class);
+            return jsonLd.expand(compacted).orElseThrow(f -> new EdcException(f.getFailureDetail()));
+        } catch (JsonProcessingException e) {
+            throw new EdcException("Cannot deserialize dataset", e);
+        }
     }
 
     /**

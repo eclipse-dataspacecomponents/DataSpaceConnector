@@ -71,10 +71,21 @@ public class SqlTransferProcessStore extends AbstractSqlStore implements Transfe
     }
 
     @Override
+    public @Nullable TransferProcess findById(String id) {
+        return transactionContext.execute(() -> {
+            try (var connection = getConnection()) {
+                return findByIdInternal(connection, id);
+            } catch (SQLException e) {
+                throw new EdcPersistenceException(e);
+            }
+        });
+    }
+
+    @Override
     public @NotNull List<TransferProcess> nextNotLeased(int max, Criterion... criteria) {
         return transactionContext.execute(() -> {
             var filter = Arrays.stream(criteria).collect(toList());
-            var querySpec = QuerySpec.Builder.newInstance().filter(filter).limit(max).build();
+            var querySpec = QuerySpec.Builder.newInstance().filter(filter).sortField("stateTimestamp").limit(max).build();
             var statement = statements.createQuery(querySpec)
                     .addWhereClause(statements.getNotLeasedFilter(), clock.millis());
 
@@ -111,30 +122,6 @@ public class SqlTransferProcessStore extends AbstractSqlStore implements Transfe
     }
 
     @Override
-    public StoreResult<TransferProcess> findByCorrelationIdAndLease(String correlationId) {
-        return transactionContext.execute(() -> {
-            var query = correlationIdQuerySpec(correlationId);
-
-            try (
-                    var connection = getConnection();
-                    var stream = executeQuery(connection, query)
-            ) {
-                var entity = stream.findFirst().orElse(null);
-                if (entity == null) {
-                    return StoreResult.notFound(format("TransferProcess with correlationId %s not found", correlationId));
-                }
-
-                leaseContext.withConnection(connection).acquireLease(entity.getId());
-                return StoreResult.success(entity);
-            } catch (IllegalStateException e) {
-                return StoreResult.alreadyLeased(format("TransferProcess with correlationId %s is already leased", correlationId));
-            } catch (SQLException e) {
-                throw new EdcPersistenceException(e);
-            }
-        });
-    }
-
-    @Override
     public void save(TransferProcess entity) {
         Objects.requireNonNull(entity.getId(), "TransferProcesses must have an ID!");
         transactionContext.execute(() -> {
@@ -146,17 +133,6 @@ public class SqlTransferProcessStore extends AbstractSqlStore implements Transfe
                 } else {
                     insert(conn, entity);
                 }
-            } catch (SQLException e) {
-                throw new EdcPersistenceException(e);
-            }
-        });
-    }
-
-    @Override
-    public @Nullable TransferProcess findById(String id) {
-        return transactionContext.execute(() -> {
-            try (var connection = getConnection()) {
-                return findByIdInternal(connection, id);
             } catch (SQLException e) {
                 throw new EdcPersistenceException(e);
             }
@@ -201,6 +177,30 @@ public class SqlTransferProcessStore extends AbstractSqlStore implements Transfe
         return transactionContext.execute(() -> {
             try (var conn = getConnection()) {
                 return executeQuery(conn, querySpec);
+            } catch (SQLException e) {
+                throw new EdcPersistenceException(e);
+            }
+        });
+    }
+
+    @Override
+    public StoreResult<TransferProcess> findByCorrelationIdAndLease(String correlationId) {
+        return transactionContext.execute(() -> {
+            var query = correlationIdQuerySpec(correlationId);
+
+            try (
+                    var connection = getConnection();
+                    var stream = executeQuery(connection, query)
+            ) {
+                var entity = stream.findFirst().orElse(null);
+                if (entity == null) {
+                    return StoreResult.notFound(format("TransferProcess with correlationId %s not found", correlationId));
+                }
+
+                leaseContext.withConnection(connection).acquireLease(entity.getId());
+                return StoreResult.success(entity);
+            } catch (IllegalStateException e) {
+                return StoreResult.alreadyLeased(format("TransferProcess with correlationId %s is already leased", correlationId));
             } catch (SQLException e) {
                 throw new EdcPersistenceException(e);
             }

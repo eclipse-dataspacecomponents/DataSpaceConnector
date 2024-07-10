@@ -33,11 +33,11 @@ import org.eclipse.edc.spi.types.domain.transfer.DataFlowResponseMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowStartMessage;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowTerminateMessage;
 import org.eclipse.edc.spi.types.domain.transfer.FlowType;
+import org.eclipse.edc.spi.types.domain.transfer.TransferType;
 import org.eclipse.edc.transform.TypeTransformerRegistryImpl;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.eclipse.edc.transform.transformer.dspace.from.JsonObjectFromDataAddressDspaceTransformer;
 import org.eclipse.edc.transform.transformer.dspace.to.JsonObjectToDataAddressDspaceTransformer;
-import org.hamcrest.Matchers;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,8 +79,16 @@ public class DataPlaneSignalingApiEndToEndTest extends AbstractDataPlaneTest {
         seedVault();
         var jsonLd = runtime.getService(JsonLd.class);
 
-        var processId = "test-processId";
-        var flowMessage = createStartMessage(processId);
+        var processId = UUID.randomUUID().toString();
+        var flowMessage = DataFlowStartMessage.Builder.newInstance()
+                .processId(processId)
+                .sourceDataAddress(DataAddress.Builder.newInstance().type("HttpData").property(EDC_NAMESPACE + "baseUrl", "http://foo.bar/").build())
+                .transferType(new TransferType("HttpData", FlowType.PULL))
+                .participantId("some-participantId")
+                .assetId("test-asset")
+                .callbackAddress(URI.create("https://foo.bar/callback"))
+                .agreementId("test-agreement")
+                .build();
         var startMessage = registry.transform(flowMessage, JsonObject.class).orElseThrow(failTest());
 
         var resultJson = DATAPLANE.getDataPlaneControlEndpoint()
@@ -88,15 +97,14 @@ public class DataPlaneSignalingApiEndToEndTest extends AbstractDataPlaneTest {
                 .body(startMessage)
                 .post("/v1/dataflows")
                 .then()
-                .body(Matchers.notNullValue())
+                .log().ifValidationFails()
                 .statusCode(200)
-                .log().ifError()
+                .body(notNullValue())
                 .extract().body().asString();
 
         var dataFlowResponseMessage = jsonLd.expand(mapper.readValue(resultJson, JsonObject.class))
                 .compose(json -> registry.transform(json, DataFlowResponseMessage.class))
                 .orElseThrow(failTest());
-
 
         var dataAddress = dataFlowResponseMessage.getDataAddress();
 
@@ -146,6 +154,7 @@ public class DataPlaneSignalingApiEndToEndTest extends AbstractDataPlaneTest {
                 .id(dataFlowId)
                 .source(DataAddress.Builder.newInstance().type("HttpData").property(EDC_NAMESPACE + "baseUrl", "http://foo.bar/").build())
                 .destination(DataAddress.Builder.newInstance().type("HttpData").property(EDC_NAMESPACE + "baseUrl", "http://fizz.buzz").build())
+                .transferType(new TransferType("HttpData", FlowType.PUSH))
                 .traceContext(Map.of())
                 .state(DataFlowStates.STARTED.code())
                 .build();
@@ -171,20 +180,6 @@ public class DataPlaneSignalingApiEndToEndTest extends AbstractDataPlaneTest {
                 .extracting(DataFlow::getState)
                 .isEqualTo(DataFlowStates.TERMINATED.code());
 
-    }
-
-
-    private DataFlowStartMessage createStartMessage(String processId) {
-        return DataFlowStartMessage.Builder.newInstance()
-                .processId(processId)
-                .sourceDataAddress(DataAddress.Builder.newInstance().type("HttpData").property(EDC_NAMESPACE + "baseUrl", "http://foo.bar/").build())
-                .destinationDataAddress(DataAddress.Builder.newInstance().type("HttpData").property(EDC_NAMESPACE + "baseUrl", "http://fizz.buzz").build())
-                .flowType(FlowType.PULL)
-                .participantId("some-participantId")
-                .assetId("test-asset")
-                .callbackAddress(URI.create("https://foo.bar/callback"))
-                .agreementId("test-agreement")
-                .build();
     }
 
     @NotNull

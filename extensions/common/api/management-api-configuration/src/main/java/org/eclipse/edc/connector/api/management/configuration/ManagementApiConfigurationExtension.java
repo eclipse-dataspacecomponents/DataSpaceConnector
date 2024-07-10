@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.connector.api.management.configuration;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import jakarta.json.Json;
 import org.eclipse.edc.api.auth.spi.AuthenticationRequestFilter;
 import org.eclipse.edc.api.auth.spi.registry.ApiAuthenticationRegistry;
@@ -57,6 +58,7 @@ import org.eclipse.edc.web.spi.configuration.context.ManagementApiUrl;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.eclipse.edc.policy.model.OdrlNamespace.ODRL_PREFIX;
@@ -70,7 +72,7 @@ import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
 @Extension(ManagementApiConfigurationExtension.NAME)
 public class ManagementApiConfigurationExtension implements ServiceExtension {
 
-    public static final String API_VERSION_JSON_FILE = "version.json";
+    public static final String API_VERSION_JSON_FILE = "management-api-version.json";
     public static final String NAME = "Management API configuration";
     public static final String WEB_SERVICE_NAME = "Management API";
 
@@ -157,8 +159,10 @@ public class ManagementApiConfigurationExtension implements ServiceExtension {
             if (versionContent == null) {
                 throw new EdcException("Version file not found or not readable.");
             }
-            var content = typeManager.getMapper().readValue(versionContent, VersionRecord.class);
-            apiVersionService.addRecord(ApiContext.MANAGEMENT, content);
+            Stream.of(typeManager.getMapper()
+                            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+                            .readValue(versionContent, VersionRecord[].class))
+                    .forEach(vr -> apiVersionService.addRecord(ApiContext.MANAGEMENT, vr));
         } catch (IOException e) {
             throw new EdcException(e);
         }

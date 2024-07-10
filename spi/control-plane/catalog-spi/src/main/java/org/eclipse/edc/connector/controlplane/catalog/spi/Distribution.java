@@ -71,7 +71,6 @@ public class Distribution {
 
         public Distribution build() {
             Objects.requireNonNull(distribution.dataService, "DataService must not be null");
-            Objects.requireNonNull(distribution.format, "Format must not be null");
 
             return distribution;
         }

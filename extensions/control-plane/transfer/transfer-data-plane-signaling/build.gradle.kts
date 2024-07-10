@@ -29,11 +29,4 @@ dependencies {
     testImplementation(project(":core:common:junit"))
 }
 
-edcBuild {
-    swagger {
-        apiGroup.set("control-api")
-    }
-}
-
-
 

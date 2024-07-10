@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.api.observability;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.EdcException;
@@ -27,13 +28,14 @@ import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.web.spi.WebService;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 
 @Extension(value = ObservabilityApiExtension.NAME)
 public class ObservabilityApiExtension implements ServiceExtension {
 
     public static final String NAME = "Observability API";
     public static final String OBSERVABILITY_CONTEXT = "observability";
-    private static final String API_VERSION_JSON_FILE = "version.json";
+    private static final String API_VERSION_JSON_FILE = "observability-api-version.json";
     private final HealthCheckResult result = HealthCheckResult.Builder.newInstance().component(NAME).build();
 
     @Inject
@@ -66,8 +68,10 @@ public class ObservabilityApiExtension implements ServiceExtension {
             if (versionContent == null) {
                 throw new EdcException("Version file not found or not readable.");
             }
-            var content = typeManager.getMapper().readValue(versionContent, VersionRecord.class);
-            apiVersionService.addRecord(OBSERVABILITY_CONTEXT, content);
+            Stream.of(typeManager.getMapper()
+                            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+                            .readValue(versionContent, VersionRecord[].class))
+                    .forEach(vr -> apiVersionService.addRecord(OBSERVABILITY_CONTEXT, vr));
         } catch (IOException e) {
             throw new EdcException(e);
         }

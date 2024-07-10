@@ -14,7 +14,9 @@
 
 package org.eclipse.edc.api;
 
+import org.eclipse.edc.api.auth.ApiAuthenticationProviderRegistryImpl;
 import org.eclipse.edc.api.auth.ApiAuthenticationRegistryImpl;
+import org.eclipse.edc.api.auth.spi.registry.ApiAuthenticationProviderRegistry;
 import org.eclipse.edc.api.auth.spi.registry.ApiAuthenticationRegistry;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
@@ -37,5 +39,9 @@ public class ApiCoreDefaultServicesExtension implements ServiceExtension {
     public ApiAuthenticationRegistry apiAuthenticationRegistry() {
         return new ApiAuthenticationRegistryImpl();
     }
-
+    
+    @Provider
+    public ApiAuthenticationProviderRegistry apiAuthenticationProviderRegistry() {
+        return new ApiAuthenticationProviderRegistryImpl();
+    }
 }

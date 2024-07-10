@@ -25,11 +25,14 @@ import org.eclipse.edc.connector.dataplane.selector.spi.store.DataPlaneInstanceS
 import org.eclipse.edc.junit.annotations.EndToEndTest;
 import org.eclipse.edc.junit.annotations.PostgresqlIntegrationTest;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 import static io.restassured.http.ContentType.JSON;
@@ -41,19 +44,11 @@ import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_PREFIX;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
 public class CatalogApiEndToEndTest {
-
-    @Nested
-    @EndToEndTest
-    @ExtendWith(ManagementEndToEndExtension.InMemory.class)
-    class InMemory extends Tests { }
-
-    @Nested
-    @PostgresqlIntegrationTest
-    @ExtendWith(ManagementEndToEndExtension.Postgres.class)
-    class Postgres extends Tests { }
 
     abstract static class Tests {
 
@@ -133,6 +128,61 @@ public class CatalogApiEndToEndTest {
         }
 
         @Test
+        void requestCatalog_whenAssetIsCatalogAsset_shouldReturnCatalogOfCatalogs(ManagementEndToEndTestContext context, AssetIndex assetIndex,
+                                                                                  PolicyDefinitionStore policyDefinitionStore,
+                                                                                  ContractDefinitionStore contractDefinitionStore) {
+            // create and store policy
+            var policyId = UUID.randomUUID().toString();
+            var policy = Policy.Builder.newInstance().build();
+            policyDefinitionStore.create(PolicyDefinition.Builder.newInstance().id(policyId).policy(policy).build());
+
+            // create CatalogAsset
+            var catalogAssetId = "catalog-asset-" + UUID.randomUUID();
+            var httpData = createAsset(catalogAssetId, "HttpData")
+                    .property(Asset.PROPERTY_IS_CATALOG, true)
+                    .build();
+            httpData.getDataAddress().getProperties().put(EDC_NAMESPACE + "baseUrl", "http://quizzqua.zz/buzz");
+            assetIndex.create(httpData);
+
+            // create conventional asset
+            var normalAssetId = "normal-asset-" + UUID.randomUUID();
+            assetIndex.create(createAsset(normalAssetId, "test-type").build());
+
+            // create ContractDefinition
+            var cd = ContractDefinition.Builder.newInstance()
+                    .id(UUID.randomUUID().toString())
+                    .contractPolicyId(policyId)
+                    .accessPolicyId(policyId)
+                    .assetsSelector(List.of(Criterion.criterion("id", "in", List.of(catalogAssetId, normalAssetId))))
+                    .build();
+            contractDefinitionStore.save(cd);
+
+            // request all assets
+            var requestBody = createObjectBuilder()
+                    .add(CONTEXT, createObjectBuilder().add(EDC_PREFIX, EDC_NAMESPACE))
+                    .add(TYPE, "CatalogRequest")
+                    .add("counterPartyAddress", context.providerProtocolUrl())
+                    .add("protocol", "dataspace-protocol-http")
+                    .build();
+
+            context.baseRequest()
+                    .contentType(JSON)
+                    .body(requestBody)
+                    .post("/v3/catalog/request")
+                    .then()
+                    .statusCode(200)
+                    .contentType(JSON)
+                    .body(TYPE, is("dcat:Catalog"))
+                    .body("'dcat:service'", notNullValue())
+                    // findAll is the restAssured way to express JSON Path filters
+                    .body("'dcat:dataset'", hasSize(2))
+                    .body("'dcat:dataset'.findAll { it -> it.'@type' == 'dcat:Catalog' }.isCatalog", contains(true))
+                    .body("'dcat:dataset'.findAll { it -> it.'@type' == 'dcat:Catalog' }.'@id'", contains(catalogAssetId))
+                    .body("'dcat:dataset'.findAll { it -> it.'@type' == 'dcat:Catalog' }.'dcat:service'.'dcat:endpointUrl'", contains("http://quizzqua.zz/buzz"))
+                    .body("'dcat:dataset'.findAll { it -> it.'@type' == 'dcat:Catalog' }.'dcat:distribution'.'dcat:accessService'.'@id'", contains(Base64.getUrlEncoder().encodeToString(catalogAssetId.getBytes())));
+        }
+
+        @Test
         void getDataset_shouldReturnDataset(ManagementEndToEndTestContext context, AssetIndex assetIndex,
                                             DataPlaneInstanceStore dataPlaneInstanceStore) {
             var dataPlaneInstance = DataPlaneInstance.Builder.newInstance().url("http://localhost/any")
@@ -161,12 +211,25 @@ public class CatalogApiEndToEndTest {
                     .body("'dcat:distribution'.'dcat:accessService'.@id", notNullValue());
         }
 
+
         private Asset.Builder createAsset(String id, String sourceType) {
             return Asset.Builder.newInstance()
                     .dataAddress(DataAddress.Builder.newInstance().type(sourceType).build())
                     .id(id);
         }
 
+    }
+
+    @Nested
+    @EndToEndTest
+    @ExtendWith(ManagementEndToEndExtension.InMemory.class)
+    class InMemory extends Tests {
+    }
+
+    @Nested
+    @PostgresqlIntegrationTest
+    @ExtendWith(ManagementEndToEndExtension.Postgres.class)
+    class Postgres extends Tests {
     }
 
 }

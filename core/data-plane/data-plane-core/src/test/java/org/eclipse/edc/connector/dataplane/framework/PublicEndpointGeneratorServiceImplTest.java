@@ -15,7 +15,9 @@
 package org.eclipse.edc.connector.dataplane.framework;
 
 import org.eclipse.edc.connector.dataplane.spi.Endpoint;
+import org.eclipse.edc.connector.dataplane.spi.iam.PublicEndpointGeneratorService;
 import org.eclipse.edc.spi.types.domain.DataAddress;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,23 +26,32 @@ import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 
 class PublicEndpointGeneratorServiceImplTest {
 
-    private final PublicEndpointGeneratorServiceImpl generatorService = new PublicEndpointGeneratorServiceImpl();
+    private final PublicEndpointGeneratorService generatorService = new PublicEndpointGeneratorServiceImpl();
 
-    @Test
-    void generateFor() {
-        var endpoint = new Endpoint("fizz", "bar-type");
-        generatorService.addGeneratorFunction("testtype", dataAddress -> endpoint);
+    @Nested
+    class GenerateFor {
 
-        assertThat(generatorService.generateFor(DataAddress.Builder.newInstance().type("testtype").build())).isSucceeded()
-                .isEqualTo(endpoint);
-    }
+        @Test
+        void shouldGenerateEndpointBasedOnDestinationType() {
+            var endpoint = new Endpoint("fizz", "bar-type");
 
-    @Test
-    void generateFor_noFunction() {
-        assertThat(generatorService.generateFor(DataAddress.Builder.newInstance().type("testtype").build()))
-                .isFailed()
-                .detail()
-                .isEqualTo("No Endpoint generator function registered for source data type 'testtype'");
+            generatorService.addGeneratorFunction("destinationType", dataAddress -> endpoint);
+            var sourceAddress = DataAddress.Builder.newInstance().type("testtype").build();
+
+            var result = generatorService.generateFor("destinationType", sourceAddress);
+
+            assertThat(result).isSucceeded().isEqualTo(endpoint);
+        }
+
+        @Test
+        void shouldFail_whenFunctionIsNotRegistered() {
+            var sourceAddress = DataAddress.Builder.newInstance().type("testtype").build();
+
+            var result = generatorService.generateFor("any", sourceAddress);
+
+            assertThat(result).isFailed();
+        }
+
     }
 
     @Test

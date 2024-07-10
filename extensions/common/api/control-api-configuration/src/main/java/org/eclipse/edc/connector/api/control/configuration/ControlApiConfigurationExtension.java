@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.connector.api.control.configuration;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import org.eclipse.edc.api.auth.spi.AuthenticationRequestFilter;
 import org.eclipse.edc.api.auth.spi.registry.ApiAuthenticationRegistry;
 import org.eclipse.edc.jsonld.spi.JsonLd;
@@ -41,6 +42,7 @@ import org.eclipse.edc.web.spi.configuration.context.ControlApiUrl;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_PREFIX;
@@ -76,7 +78,7 @@ public class ControlApiConfigurationExtension implements ServiceExtension {
             .name(WEB_SERVICE_NAME)
             .build();
     private static final String CONTROL_SCOPE = "CONTROL_API";
-    private static final String API_VERSION_JSON_FILE = "version.json";
+    private static final String API_VERSION_JSON_FILE = "control-api-version.json";
 
     @Inject
     private WebServer webServer;
@@ -124,8 +126,10 @@ public class ControlApiConfigurationExtension implements ServiceExtension {
             if (versionContent == null) {
                 throw new EdcException("Version file not found or not readable.");
             }
-            var content = typeManager.getMapper().readValue(versionContent, VersionRecord.class);
-            apiVersionService.addRecord(ApiContext.CONTROL, content);
+            Stream.of(typeManager.getMapper()
+                            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+                            .readValue(versionContent, VersionRecord[].class))
+                    .forEach(vr -> apiVersionService.addRecord(ApiContext.CONTROL, vr));
         } catch (IOException e) {
             throw new EdcException(e);
         }

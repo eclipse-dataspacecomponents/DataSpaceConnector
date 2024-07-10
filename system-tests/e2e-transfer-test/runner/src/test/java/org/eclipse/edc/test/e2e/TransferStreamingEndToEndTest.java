@@ -26,10 +26,10 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates;
 import org.eclipse.edc.junit.annotations.EndToEndTest;
 import org.eclipse.edc.junit.extensions.RuntimeExtension;
 import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
+import org.eclipse.edc.spi.security.Vault;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,6 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
 import javax.validation.constraints.NotNull;
@@ -55,13 +54,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.contractExpiresIn;
-import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.noConstraintPolicy;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.SUSPENDED;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.test.e2e.Runtimes.backendService;
 import static org.eclipse.edc.util.io.Ports.getFreePort;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.model.HttpRequest.request;
@@ -78,20 +75,20 @@ public class TransferStreamingEndToEndTest {
 
         @RegisterExtension
         static final RuntimeExtension CONSUMER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlane("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension CONSUMER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("consumer-backend-service", CONSUMER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE.create("consumer-control-plane", CONSUMER.controlPlaneConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_CONTROL_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.controlPlane("provider-control-plane", PROVIDER.controlPlaneConfiguration()));
+                    Runtimes.IN_MEMORY_CONTROL_PLANE.create("provider-control-plane", PROVIDER.controlPlaneConfiguration()));
+
         @RegisterExtension
         static final RuntimeExtension PROVIDER_DATA_PLANE = new RuntimePerClassExtension(
-                Runtimes.InMemory.dataPlane("provider-data-plane", PROVIDER.dataPlaneConfiguration()));
-        @RegisterExtension
-        static final RuntimeExtension PROVIDER_BACKEND_SERVICE = new RuntimePerClassExtension(
-                backendService("provider-backend-service", PROVIDER.backendServiceConfiguration()));
+                    Runtimes.IN_MEMORY_DATA_PLANE.create("provider-data-plane", PROVIDER.dataPlaneConfiguration()));
 
+        @Override
+        protected Vault getDataplaneVault() {
+            return PROVIDER_DATA_PLANE.getService(Vault.class);
+        }
     }
 
     @Testcontainers
@@ -124,16 +121,14 @@ public class TransferStreamingEndToEndTest {
             createResourcesOnProvider(assetId, contractExpiresIn("10s"), kafkaSourceProperty());
 
             var destination = httpSink(destinationServer.getLocalPort(), "/api/service");
-            var transferProcessId = CONSUMER.requestAsset(PROVIDER, assetId, noPrivateProperty(), destination, "HttpData-PUSH");
+            var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                    .withDestination(destination).withTransferType("HttpData-PUSH").execute();
 
             await().atMost(timeout).untilAsserted(() -> {
                 destinationServer.verify(request, atLeast(1));
             });
 
-            await().atMost(timeout).untilAsserted(() -> {
-                var state = CONSUMER.getTransferProcessState(transferProcessId);
-                assertThat(TransferProcessStates.valueOf(state)).isGreaterThanOrEqualTo(TERMINATED);
-            });
+            awaitTransferToBeInState(transferProcessId, TERMINATED);
 
             destinationServer.clear(request)
                     .when(request).respond(response());
@@ -158,7 +153,8 @@ public class TransferStreamingEndToEndTest {
                 var assetId = UUID.randomUUID().toString();
                 createResourcesOnProvider(assetId, contractExpiresIn("10s"), kafkaSourceProperty());
 
-                var transferProcessId = CONSUMER.requestAsset(PROVIDER, assetId, noPrivateProperty(), kafkaSink(), "Kafka-PUSH");
+                var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                        .withDestination(kafkaSink()).withTransferType("Kafka-PUSH").execute();
                 assertMessagesAreSentTo(consumer);
 
                 awaitTransferToBeInState(transferProcessId, TERMINATED);
@@ -172,9 +168,10 @@ public class TransferStreamingEndToEndTest {
                 consumer.subscribe(List.of(SINK_TOPIC));
 
                 var assetId = UUID.randomUUID().toString();
-                createResourcesOnProvider(assetId, noConstraintPolicy(), kafkaSourceProperty());
+                createResourcesOnProvider(assetId, kafkaSourceProperty());
 
-                var transferProcessId = CONSUMER.requestAsset(PROVIDER, assetId, noPrivateProperty(), kafkaSink(), "Kafka-PUSH");
+                var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                        .withDestination(kafkaSink()).withTransferType("Kafka-PUSH").execute();
                 assertMessagesAreSentTo(consumer);
 
                 CONSUMER.suspendTransfer(transferProcessId, "any kind of reason");
@@ -201,13 +198,6 @@ public class TransferStreamingEndToEndTest {
                 var recordsFound = consumer.poll(Duration.ofSeconds(1)).records(SINK_TOPIC);
                 assertThat(recordsFound).isEmpty();
             });
-        }
-
-        private void awaitTransferToBeInState(String transferProcessId, TransferProcessStates state) {
-            await().atMost(timeout).until(
-                    () -> CONSUMER.getTransferProcessState(transferProcessId),
-                    it -> Objects.equals(it, state.name())
-            );
         }
 
         private JsonObject httpSink(Integer port, String path) {
@@ -264,10 +254,6 @@ public class TransferStreamingEndToEndTest {
 
         private String kafkaProperty(String property) {
             return "kafka." + property;
-        }
-
-        private JsonObject noPrivateProperty() {
-            return Json.createObjectBuilder().build();
         }
 
         private String sampleMessage() {

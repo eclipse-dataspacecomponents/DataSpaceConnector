@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":extensions:data-plane:data-plane-kafka"))
     implementation(project(":extensions:data-plane:data-plane-http-oauth2"))
     implementation(project(":extensions:data-plane:data-plane-control-api"))
+    implementation(project(":extensions:data-plane:data-plane-public-api-v2"))
     implementation(project(":extensions:data-plane:data-plane-signaling:data-plane-signaling-api"))
 }
 

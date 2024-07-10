@@ -35,22 +35,20 @@ import static java.util.UUID.randomUUID;
 @JsonDeserialize(builder = Dataset.Builder.class)
 public class Dataset {
 
-    private String id;
-
     /**
      * Policies under which this Dataset is available.
      */
-    private final Map<String, Policy> offers = new HashMap<>();
-
+    protected final Map<String, Policy> offers = new HashMap<>();
+    protected String id;
     /**
      * Representations of this Dataset.
      */
-    private List<Distribution> distributions;
+    protected List<Distribution> distributions = new ArrayList<>();
 
     /**
      * Properties for describing the Dataset.
      */
-    private Map<String, Object> properties = new HashMap<>();
+    protected Map<String, Object> properties = new HashMap<>();
 
     public String getId() {
         return id;
@@ -78,60 +76,65 @@ public class Dataset {
     }
 
     @JsonPOJOBuilder(withPrefix = "")
-    public static class Builder {
-        private final Dataset dataset;
+    public static class Builder<T extends Dataset, B extends Builder<T, B>> {
+        protected final T dataset;
 
-        private Builder() {
-            dataset = new Dataset();
+        protected Builder(T dataset) {
+            this.dataset = dataset;
         }
 
+        @SuppressWarnings({ "rawtypes", "unchecked" })
         @JsonCreator
         public static Builder newInstance() {
-            return new Builder();
+            return new Builder(new Dataset());
         }
 
-        public Builder id(String id) {
+        public B id(String id) {
             dataset.id = id;
-            return this;
+            return self();
         }
 
-        public Builder offer(String offerId, Policy policy) {
+        public B offer(String offerId, Policy policy) {
             dataset.offers.put(offerId, policy);
-            return this;
+            return self();
         }
 
-        public Builder distribution(Distribution distribution) {
+        public B distribution(Distribution distribution) {
             if (dataset.distributions == null) {
                 dataset.distributions = new ArrayList<>();
             }
             dataset.distributions.add(distribution);
-            return this;
+            return self();
         }
 
-        public Builder distributions(List<Distribution> distributions) {
+        public B distributions(List<Distribution> distributions) {
             if (dataset.distributions == null) {
                 dataset.distributions = new ArrayList<>();
             }
             dataset.distributions.addAll(distributions);
-            return this;
+            return self();
         }
 
-        public Builder properties(Map<String, Object> properties) {
+        public B properties(Map<String, Object> properties) {
             dataset.properties = properties;
-            return this;
+            return self();
         }
 
-        public Builder property(String key, Object value) {
+        public B property(String key, Object value) {
             dataset.properties.put(key, value);
-            return this;
+            return self();
         }
 
-        public Dataset build() {
+        public T build() {
             if (dataset.id == null) {
                 dataset.id = randomUUID().toString();
             }
 
             return dataset;
+        }
+
+        public B self() {
+            return (B) this;
         }
     }
 

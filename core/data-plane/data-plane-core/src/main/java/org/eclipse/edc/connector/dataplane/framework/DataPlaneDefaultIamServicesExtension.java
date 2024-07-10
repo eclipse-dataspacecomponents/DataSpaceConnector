@@ -24,6 +24,7 @@ import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
+import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
@@ -59,7 +60,6 @@ public class DataPlaneDefaultIamServicesExtension implements ServiceExtension {
         return NAME;
     }
 
-
     @Provider(isDefault = true)
     public DataPlaneAccessControlService defaultAccessControlService(ServiceExtensionContext context) {
         context.getMonitor().debug("DataPlane Access Control: default implementation is used, will always return Result.success()");
@@ -68,24 +68,24 @@ public class DataPlaneDefaultIamServicesExtension implements ServiceExtension {
 
     @Provider(isDefault = true)
     public DataPlaneAccessTokenService defaultAccessTokenService(ServiceExtensionContext context) {
+        var tokenVerifierPublicKeyAlias = context.getConfig().getString(TOKEN_VERIFIER_PUBLIC_KEY_ALIAS);
+        var tokenSignerPrivateKeyAlias = context.getConfig().getString(TOKEN_SIGNER_PRIVATE_KEY_ALIAS);
+        var monitor = context.getMonitor().withPrefix("DataPlane IAM");
         return new DefaultDataPlaneAccessTokenServiceImpl(new JwtGenerationService(),
-                accessTokenDataStore, context.getMonitor().withPrefix("DataPlane IAM"),
-                getPrivateKeySupplier(context), publicKeyIdSupplier(context), tokenValidationService, localPublicKeyService);
+                accessTokenDataStore, monitor, getPrivateKeySupplier(tokenSignerPrivateKeyAlias, monitor),
+                publicKeyIdSupplier(tokenVerifierPublicKeyAlias), tokenValidationService, localPublicKeyService);
     }
 
-    private Supplier<String> publicKeyIdSupplier(ServiceExtensionContext context) {
-        return () -> context.getConfig().getString(TOKEN_VERIFIER_PUBLIC_KEY_ALIAS);
+    private Supplier<String> publicKeyIdSupplier(String tokenVerifierPublicKeyAlias) {
+        return () -> tokenVerifierPublicKeyAlias;
     }
 
     @NotNull
-    private Supplier<PrivateKey> getPrivateKeySupplier(ServiceExtensionContext context) {
-        return () -> {
-            var alias = context.getConfig().getString(TOKEN_SIGNER_PRIVATE_KEY_ALIAS);
-            return privateKeyResolver.resolvePrivateKey(alias)
-                    .orElse(f -> {
-                        context.getMonitor().warning("Cannot resolve private key: " + f.getFailureDetail());
-                        return null;
-                    });
-        };
+    private Supplier<PrivateKey> getPrivateKeySupplier(String tokenSignerPrivateKeyAlias, Monitor monitor) {
+        return () -> privateKeyResolver.resolvePrivateKey(tokenSignerPrivateKeyAlias)
+                .orElse(f -> {
+                    monitor.warning("Cannot resolve private key: " + f.getFailureDetail());
+                    return null;
+                });
     }
 }

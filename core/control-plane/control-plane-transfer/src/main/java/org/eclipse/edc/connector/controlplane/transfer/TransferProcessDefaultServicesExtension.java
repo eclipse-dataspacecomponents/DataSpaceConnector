@@ -15,13 +15,13 @@
 package org.eclipse.edc.connector.controlplane.transfer;
 
 import org.eclipse.edc.connector.controlplane.transfer.flow.DataFlowManagerImpl;
-import org.eclipse.edc.connector.controlplane.transfer.flow.FlowTypeExtractorImpl;
+import org.eclipse.edc.connector.controlplane.transfer.flow.TransferTypeParserImpl;
 import org.eclipse.edc.connector.controlplane.transfer.observe.TransferProcessObservableImpl;
 import org.eclipse.edc.connector.controlplane.transfer.provision.ProvisionManagerImpl;
 import org.eclipse.edc.connector.controlplane.transfer.provision.ResourceManifestGeneratorImpl;
 import org.eclipse.edc.connector.controlplane.transfer.spi.TransferProcessPendingGuard;
 import org.eclipse.edc.connector.controlplane.transfer.spi.flow.DataFlowManager;
-import org.eclipse.edc.connector.controlplane.transfer.spi.flow.FlowTypeExtractor;
+import org.eclipse.edc.connector.controlplane.transfer.spi.flow.TransferTypeParser;
 import org.eclipse.edc.connector.controlplane.transfer.spi.observe.TransferProcessObservable;
 import org.eclipse.edc.connector.controlplane.transfer.spi.provision.ProvisionManager;
 import org.eclipse.edc.connector.controlplane.transfer.spi.provision.ResourceManifestGenerator;
@@ -71,8 +71,8 @@ public class TransferProcessDefaultServicesExtension implements ServiceExtension
     }
 
     @Provider
-    public FlowTypeExtractor flowTypeExtractor() {
-        return new FlowTypeExtractorImpl();
+    public TransferTypeParser transferTypeParser() {
+        return new TransferTypeParserImpl();
     }
 
 }
