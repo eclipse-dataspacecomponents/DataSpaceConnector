@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -52,11 +53,22 @@ class PortsTest {
     }
 
     @Test
+    void getFreePortAvoidDuplicated() {
+        var lowerBound = 6000;
+        var portsToBeGenerated = 10;
+        var ports = range(0, portsToBeGenerated)
+                .mapToObj(i -> Ports.getFreePort(lowerBound, lowerBound + portsToBeGenerated))
+                .distinct().toList();
+
+        assertThat(ports.size()).isEqualTo(portsToBeGenerated);
+    }
+
+    @Test
     void getFreePort_whenOccupied() throws IOException {
         var port = Ports.getFreePort(MIN_PORT);
 
         try (var socket = new ServerSocket(port)) {
-            assertThat(Ports.getFreePort(MIN_PORT)).describedAs("Next free port").isGreaterThan(socket.getLocalPort());
+            assertThat(Ports.getFreePort(MIN_PORT)).describedAs("Next free port").isNotEqualTo(socket.getLocalPort());
         }
     }
 }

@@ -15,7 +15,6 @@
 
 package org.eclipse.edc.connector.controlplane.contract.negotiation;
 
-import org.eclipse.edc.connector.controlplane.contract.observe.ContractNegotiationObservableImpl;
 import org.eclipse.edc.connector.controlplane.contract.spi.ContractOfferId;
 import org.eclipse.edc.connector.controlplane.contract.spi.offer.ConsumerOfferResolver;
 import org.eclipse.edc.connector.controlplane.contract.spi.types.agreement.ContractAgreement;
@@ -35,7 +34,6 @@ import org.eclipse.edc.connector.controlplane.contract.spi.validation.ContractVa
 import org.eclipse.edc.connector.controlplane.contract.spi.validation.ValidatableConsumerOffer;
 import org.eclipse.edc.connector.controlplane.contract.spi.validation.ValidatedConsumerOffer;
 import org.eclipse.edc.connector.controlplane.defaults.storage.contractnegotiation.InMemoryContractNegotiationStore;
-import org.eclipse.edc.connector.controlplane.policy.spi.store.PolicyDefinitionStore;
 import org.eclipse.edc.connector.controlplane.services.contractnegotiation.ContractNegotiationProtocolServiceImpl;
 import org.eclipse.edc.connector.controlplane.services.spi.contractnegotiation.ContractNegotiationProtocolService;
 import org.eclipse.edc.connector.controlplane.services.spi.protocol.ProtocolTokenValidator;
@@ -75,6 +73,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static java.util.UUID.randomUUID;
@@ -122,6 +121,8 @@ class ContractNegotiationIntegrationTest {
     protected ParticipantAgent participantAgent = new ParticipantAgent(Collections.emptyMap(), Collections.emptyMap());
     protected TokenRepresentation tokenRepresentation = TokenRepresentation.Builder.newInstance().build();
     private String consumerNegotiationId;
+    private final AtomicReference<String> providerNegotiationId = new AtomicReference<>(null);
+    private final NoopTransactionContext transactionContext = new NoopTransactionContext();
 
     private ProviderContractNegotiationManagerImpl providerManager;
     private ConsumerContractNegotiationManagerImpl consumerManager;
@@ -137,9 +138,9 @@ class ContractNegotiationIntegrationTest {
                 .dispatcherRegistry(providerDispatcherRegistry)
                 .monitor(monitor)
                 .waitStrategy(() -> 1000)
-                .observable(new ContractNegotiationObservableImpl())
+                .observable(mock())
                 .store(providerStore)
-                .policyStore(mock(PolicyDefinitionStore.class))
+                .policyStore(mock())
                 .protocolWebhook(protocolWebhook)
                 .build();
 
@@ -147,15 +148,15 @@ class ContractNegotiationIntegrationTest {
                 .participantId(CONSUMER_ID)
                 .dispatcherRegistry(consumerDispatcherRegistry)
                 .monitor(monitor).waitStrategy(() -> 1000)
-                .observable(new ContractNegotiationObservableImpl())
+                .observable(mock())
                 .store(consumerStore)
-                .policyStore(mock(PolicyDefinitionStore.class))
+                .policyStore(mock())
                 .protocolWebhook(protocolWebhook)
                 .build();
 
         when(protocolTokenValidator.verify(eq(tokenRepresentation), any(), any(), any())).thenReturn(ServiceResult.success(participantAgent));
-        consumerService = new ContractNegotiationProtocolServiceImpl(consumerStore, new NoopTransactionContext(), validationService, offerResolver, protocolTokenValidator, new ContractNegotiationObservableImpl(), monitor, mock());
-        providerService = new ContractNegotiationProtocolServiceImpl(providerStore, new NoopTransactionContext(), validationService, offerResolver, protocolTokenValidator, new ContractNegotiationObservableImpl(), monitor, mock());
+        consumerService = new ContractNegotiationProtocolServiceImpl(consumerStore, transactionContext, validationService, offerResolver, protocolTokenValidator, mock(), monitor, mock());
+        providerService = new ContractNegotiationProtocolServiceImpl(providerStore, transactionContext, validationService, offerResolver, protocolTokenValidator, mock(), monitor, mock());
     }
 
     @AfterEach
@@ -197,9 +198,10 @@ class ContractNegotiationIntegrationTest {
         await().atMost(DEFAULT_TEST_TIMEOUT).pollInterval(DEFAULT_POLL_INTERVAL).untilAsserted(() -> {
             assertThat(consumerNegotiationId).isNotNull();
             var consumerNegotiation = consumerStore.findById(consumerNegotiationId);
-            var providerNegotiation = providerStore.findForCorrelationId(consumerNegotiationId);
+            var maybeProviderNegotiation = providerStore.findAll().filter(it -> it.getCorrelationId().equals(consumerNegotiationId)).findAny();
             assertThat(consumerNegotiation).isNotNull();
-            assertThat(providerNegotiation).isNotNull();
+            assertThat(maybeProviderNegotiation).isPresent();
+            var providerNegotiation = maybeProviderNegotiation.get();
 
             // Assert that the consumer has the callbacks
             assertThat(consumerNegotiation.getCallbackAddresses()).hasSize(1);
@@ -279,9 +281,10 @@ class ContractNegotiationIntegrationTest {
         await().atMost(DEFAULT_TEST_TIMEOUT).pollInterval(DEFAULT_POLL_INTERVAL).untilAsserted(() -> {
             assertThat(consumerNegotiationId).isNotNull();
             var consumerNegotiation = consumerStore.findById(consumerNegotiationId);
-            var providerNegotiation = providerStore.findForCorrelationId(consumerNegotiationId);
+            var maybeProviderNegotiation = providerStore.findAll().filter(it -> it.getCorrelationId().equals(consumerNegotiationId)).findAny();
             assertThat(consumerNegotiation).isNotNull();
-            assertThat(providerNegotiation).isNotNull();
+            assertThat(maybeProviderNegotiation).isPresent();
+            var providerNegotiation = maybeProviderNegotiation.get();
 
             // Assert that the consumer has the callbacks
             assertThat(consumerNegotiation.getCallbackAddresses()).hasSize(1);
@@ -323,6 +326,7 @@ class ContractNegotiationIntegrationTest {
     private Answer<Object> onProviderSentAgreementRequest() {
         return i -> {
             ContractAgreementMessage request = i.getArgument(1);
+            providerNegotiationId.set(request.getProviderPid());
             var result = consumerService.notifyAgreed(request, tokenRepresentation);
             return toFuture(result, "Success!");
         };
@@ -341,6 +345,7 @@ class ContractNegotiationIntegrationTest {
     private Answer<Object> onConsumerSentAgreementVerification() {
         return i -> {
             ContractAgreementVerificationMessage request = i.getArgument(1);
+            request.setProcessId(providerNegotiationId.get());
             var result = providerService.notifyVerified(request, tokenRepresentation);
             return toFuture(result, "Success!");
         };

@@ -29,7 +29,6 @@ import static org.eclipse.edc.protocol.dsp.negotiation.transform.to.TestInput.ge
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_NEGOTIATION_TERMINATION_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CODE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_REASON;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -68,34 +67,6 @@ class JsonObjectToContractNegotiationTerminationMessageTransformerTest {
         assertThat(result.getCounterPartyAddress()).isNull();
         assertThat(result.getConsumerPid()).isEqualTo("consumerPid");
         assertThat(result.getProviderPid()).isEqualTo("providerPid");
-        assertThat(result.getCode()).isEqualTo(CODE);
-
-        assertThat(result.getRejectionReason()).isEqualTo(format("[{\"%sfoo\":[{\"@value\":\"bar\"}]}]", DSPACE_SCHEMA));
-
-        verify(context, never()).reportProblem(anyString());
-    }
-
-    @Test
-    void transform_processId() {
-        var reason = Json.createBuilderFactory(Map.of()).createObjectBuilder().add(DSPACE_SCHEMA + "foo", "bar");
-        var reasonArray = Json.createBuilderFactory(Map.of()).createArrayBuilder().add(reason).build();
-
-        var message = jsonFactory.createObjectBuilder()
-                .add(JsonLdKeywords.ID, "id1")
-                .add(JsonLdKeywords.TYPE, DSPACE_TYPE_CONTRACT_NEGOTIATION_TERMINATION_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .add(DSPACE_PROPERTY_CODE, CODE)
-                .add(DSPACE_PROPERTY_REASON, reasonArray)
-                .build();
-
-        var result = transformer.transform(getExpanded(message), context);
-
-        assertThat(result).isNotNull();
-
-        assertThat(result.getProtocol()).isNotNull();
-        assertThat(result.getCounterPartyAddress()).isNull();
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
-        assertThat(result.getProviderPid()).isEqualTo("processId");
         assertThat(result.getCode()).isEqualTo(CODE);
 
         assertThat(result.getRejectionReason()).isEqualTo(format("[{\"%sfoo\":[{\"@value\":\"bar\"}]}]", DSPACE_SCHEMA));

@@ -36,11 +36,13 @@ public class Policy {
     private final List<Permission> permissions = new ArrayList<>();
     private final List<Prohibition> prohibitions = new ArrayList<>();
     private final List<Duty> obligations = new ArrayList<>();
+    private final List<String> profiles = new ArrayList<>();
     private final Map<String, Object> extensibleProperties = new HashMap<>();
     private String inheritsFrom;
     private String assigner;
     private String assignee;
     private String target;
+
     @JsonProperty("@type")
     private PolicyType type = PolicyType.SET;
 
@@ -57,6 +59,10 @@ public class Policy {
 
     public List<Duty> getObligations() {
         return obligations;
+    }
+
+    public List<String> getProfiles() {
+        return profiles;
     }
 
     @Nullable
@@ -102,7 +108,7 @@ public class Policy {
             return false;
         }
         Policy policy = (Policy) o;
-        return permissions.equals(policy.permissions) && prohibitions.equals(policy.prohibitions) && obligations.equals(policy.obligations) && extensibleProperties.equals(policy.extensibleProperties) &&
+        return permissions.equals(policy.permissions) && prohibitions.equals(policy.prohibitions) && obligations.equals(policy.obligations) && profiles.equals(policy.profiles) && extensibleProperties.equals(policy.extensibleProperties) &&
                 Objects.equals(inheritsFrom, policy.inheritsFrom) && Objects.equals(assigner, policy.assigner) && Objects.equals(assignee, policy.assignee) && Objects.equals(target, policy.target) && type == policy.type;
     }
 
@@ -123,6 +129,7 @@ public class Policy {
                 .type(type)
                 .extensibleProperties(extensibleProperties)
                 .target(target)
+                .profiles(profiles)
                 .build();
     }
 
@@ -139,7 +146,8 @@ public class Policy {
                 .inheritsFrom(inheritsFrom)
                 .type(type)
                 .extensibleProperties(extensibleProperties)
-                .target(target);
+                .target(target)
+                .profiles(profiles);
     }
 
     public interface Visitor<R> {
@@ -175,6 +183,12 @@ public class Policy {
 
         public Builder permissions(List<Permission> permissions) {
             policy.permissions.addAll(permissions);
+            return this;
+        }
+
+
+        public Builder profiles(List<String> profiles) {
+            policy.profiles.addAll(profiles);
             return this;
         }
 

@@ -55,8 +55,7 @@ public interface EdrCacheApiV3 {
                             content = @Content(array = @ArraySchema(schema = @Schema(implementation = ApiCoreSchema.ApiErrorDetailSchema.class)))),
                     @ApiResponse(responseCode = "404", description = "An EDR data address with the given transfer process ID does not exist",
                             content = @Content(array = @ArraySchema(schema = @Schema(implementation = ApiCoreSchema.ApiErrorDetailSchema.class))))
-            },
-            deprecated = true
+            }
     )
     JsonObject getEdrEntryDataAddressV3(String transferProcessId);
 

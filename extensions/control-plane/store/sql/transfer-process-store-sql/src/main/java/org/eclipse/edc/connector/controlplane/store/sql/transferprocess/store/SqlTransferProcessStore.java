@@ -183,30 +183,6 @@ public class SqlTransferProcessStore extends AbstractSqlStore implements Transfe
         });
     }
 
-    @Override
-    public StoreResult<TransferProcess> findByCorrelationIdAndLease(String correlationId) {
-        return transactionContext.execute(() -> {
-            var query = correlationIdQuerySpec(correlationId);
-
-            try (
-                    var connection = getConnection();
-                    var stream = executeQuery(connection, query)
-            ) {
-                var entity = stream.findFirst().orElse(null);
-                if (entity == null) {
-                    return StoreResult.notFound(format("TransferProcess with correlationId %s not found", correlationId));
-                }
-
-                leaseContext.withConnection(connection).acquireLease(entity.getId());
-                return StoreResult.success(entity);
-            } catch (IllegalStateException e) {
-                return StoreResult.alreadyLeased(format("TransferProcess with correlationId %s is already leased", correlationId));
-            } catch (SQLException e) {
-                throw new EdcPersistenceException(e);
-            }
-        });
-    }
-
     private QuerySpec correlationIdQuerySpec(String correlationId) {
         var criterion = criterion("correlationId", "=", correlationId);
         return QuerySpec.Builder.newInstance().filter(criterion).build();

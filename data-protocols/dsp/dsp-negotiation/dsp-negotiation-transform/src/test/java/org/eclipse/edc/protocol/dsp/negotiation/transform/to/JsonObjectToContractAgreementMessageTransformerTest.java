@@ -45,7 +45,6 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTyp
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_PROPERTY_TIMESTAMP;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_AGREEMENT_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -148,42 +147,6 @@ class JsonObjectToContractAgreementMessageTransformerTest {
         assertThat(agreement.getId()).isEqualTo(AGREEMENT_ID);
         assertThat(agreement.getConsumerId()).isEqualTo(CONSUMER_ID);
         assertThat(agreement.getProviderId()).isEqualTo(PROVIDER_ID);
-        assertThat(agreement.getAssetId()).isEqualTo(TARGET);
-        assertThat(agreement.getContractSigningDate()).isEqualTo(Instant.parse(TIMESTAMP).getEpochSecond());
-
-        verify(context, never()).reportProblem(anyString());
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void transform_processId() {
-        var message = jsonFactory.createObjectBuilder()
-                .add(ID, MESSAGE_ID)
-                .add(TYPE, DSPACE_TYPE_CONTRACT_AGREEMENT_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .add(DSPACE_PROPERTY_AGREEMENT, jsonFactory.createObjectBuilder()
-                        .add(ID, AGREEMENT_ID)
-                        .add(TYPE, ODRL_POLICY_TYPE_AGREEMENT)
-                        .add(ODRL_ASSIGNEE_ATTRIBUTE, CONSUMER_ID)
-                        .add(ODRL_ASSIGNER_ATTRIBUTE, PROVIDER_ID)
-                        .add(DSPACE_PROPERTY_TIMESTAMP, TIMESTAMP)
-                        .build())
-                .build();
-
-        when(context.transform(any(JsonObject.class), eq(Policy.class))).thenReturn(policy());
-
-        var result = transformer.transform(getExpanded(message), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getClass()).isEqualTo(ContractAgreementMessage.class);
-        assertThat(result.getProtocol()).isNotEmpty();
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
-        assertThat(result.getProviderPid()).isEqualTo("processId");
-
-        var agreement = result.getContractAgreement();
-        assertThat(agreement).isNotNull();
-        assertThat(agreement.getClass()).isEqualTo(ContractAgreement.class);
-        assertThat(agreement.getId()).isEqualTo(AGREEMENT_ID);
         assertThat(agreement.getAssetId()).isEqualTo(TARGET);
         assertThat(agreement.getContractSigningDate()).isEqualTo(Instant.parse(TIMESTAMP).getEpochSecond());
 

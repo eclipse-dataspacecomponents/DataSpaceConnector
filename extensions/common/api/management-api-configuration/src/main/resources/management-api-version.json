@@ -1,14 +1,14 @@
 [
   {
-    "version": "3.0.2",
+    "version": "3.0.3",
     "urlPath": "/v3",
-    "lastUpdated": "2024-07-10T09:17:00Z",
+    "lastUpdated": "2024-07-12T10:14:00Z",
     "maturity": "stable"
   },
   {
     "version": "3.1.0-alpha",
     "urlPath": "/v3.1alpha",
-    "lastUpdated": "2024-07-09T09:17:00Z",
+    "lastUpdated": "2024-07-10T09:17:00Z",
     "maturity": "alpha"
   }
 ]

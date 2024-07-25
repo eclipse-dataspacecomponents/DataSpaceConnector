@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.CONTEXT;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_ASSIGNEE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_ASSIGNER_ATTRIBUTE;
@@ -48,6 +49,7 @@ import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PERMISSION_AT
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_AGREEMENT;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_OFFER;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_SET;
+import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROFILE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROHIBITION_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_TARGET_ATTRIBUTE;
 import static org.eclipse.edc.policy.model.PolicyType.CONTRACT;
@@ -183,6 +185,21 @@ class JsonObjectToPolicyTransformerTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getType()).isEqualTo(CONTRACT);
+    }
+
+    @Test
+    void transform_withProfile() {
+
+        var policy = jsonFactory.createObjectBuilder()
+                .add(TYPE, ODRL_POLICY_TYPE_SET)
+                .add(ODRL_PROFILE_ATTRIBUTE, jsonFactory.createObjectBuilder().add(ID, "http://example.com/odrl:profile:01"))
+                .build();
+
+        var result = transformer.transform(TestInput.getExpanded(policy), context);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getProfiles().get(0)).isEqualTo("http://example.com/odrl:profile:01");
+        verify(context, never()).reportProblem(anyString());
     }
 
     private static class PolicyTypeArguments implements ArgumentsProvider {

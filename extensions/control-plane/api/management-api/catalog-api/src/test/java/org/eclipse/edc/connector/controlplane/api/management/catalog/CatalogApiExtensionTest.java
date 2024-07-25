@@ -16,6 +16,7 @@ package org.eclipse.edc.connector.controlplane.api.management.catalog;
 
 import org.eclipse.edc.connector.controlplane.api.management.catalog.v2.CatalogApiV2Controller;
 import org.eclipse.edc.connector.controlplane.api.management.catalog.v3.CatalogApiV3Controller;
+import org.eclipse.edc.connector.controlplane.api.management.catalog.v31alpha.CatalogApiV31AlphaController;
 import org.eclipse.edc.junit.extensions.DependencyInjectionExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.validator.spi.JsonObjectValidatorRegistry;
@@ -58,5 +59,6 @@ class CatalogApiExtensionTest {
 
         verify(webService).registerResource(any(), isA(CatalogApiV2Controller.class));
         verify(webService).registerResource(any(), isA(CatalogApiV3Controller.class));
+        verify(webService).registerResource(any(), isA(CatalogApiV31AlphaController.class));
     }
 }

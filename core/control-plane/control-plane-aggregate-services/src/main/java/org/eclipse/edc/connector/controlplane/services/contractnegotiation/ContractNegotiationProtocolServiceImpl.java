@@ -314,8 +314,6 @@ public class ContractNegotiationProtocolServiceImpl implements ContractNegotiati
 
     private ServiceResult<ContractNegotiation> getAndLeaseNegotiation(String negotiationId) {
         return store.findByIdAndLease(negotiationId)
-                // recover needed to maintain backward compatibility when there was no distinction between providerPid and consumerPid
-                .recover(it -> store.findByCorrelationIdAndLease(negotiationId))
                 .flatMap(ServiceResult::from);
     }
 
@@ -326,8 +324,6 @@ public class ContractNegotiationProtocolServiceImpl implements ContractNegotiati
 
     private ServiceResult<ContractNegotiation> getNegotiation(String negotiationId) {
         return Optional.ofNullable(store.findById(negotiationId))
-                // recover needed to maintain backward compatibility when there was no distinction between providerPid and consumerPid
-                .or(() -> Optional.ofNullable(store.findForCorrelationId(negotiationId)))
                 .map(ServiceResult::success)
                 .orElseGet(() -> ServiceResult.notFound("No negotiation with id %s found".formatted(negotiationId)));
     }

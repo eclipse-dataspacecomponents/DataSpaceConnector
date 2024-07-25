@@ -19,9 +19,7 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.Con
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.ServiceResult;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Service that permits actions and queries on ContractAgreement entity.
@@ -43,18 +41,6 @@ public interface ContractAgreementService {
      * @return the collection of contract agreements that match the query
      */
     ServiceResult<List<ContractAgreement>> search(QuerySpec query);
-
-    /**
-     * Query contract agreements
-     *
-     * @param query request
-     * @return the collection of contract agreements that match the query
-     * @deprecated please use {{@link #search(QuerySpec)}}
-     */
-    @Deprecated(since = "0.4.1")
-    default ServiceResult<Stream<ContractAgreement>> query(QuerySpec query) {
-        return search(query).map(Collection::stream);
-    }
 
     /**
      * Returns a contract negotiation by the agreement id.

@@ -16,9 +16,11 @@ package org.eclipse.edc.connector.controlplane.catalog.spi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.spi.types.domain.Polymorphic;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +35,8 @@ import static java.util.UUID.randomUUID;
  * different policies and may be available via different distributions.
  */
 @JsonDeserialize(builder = Dataset.Builder.class)
-public class Dataset {
+@JsonTypeName("dataspaceconnector:dataset")
+public class Dataset implements Polymorphic {
 
     /**
      * Policies under which this Dataset is available.
@@ -96,6 +99,11 @@ public class Dataset {
 
         public B offer(String offerId, Policy policy) {
             dataset.offers.put(offerId, policy);
+            return self();
+        }
+
+        public B offers(Map<String, Policy> offers) {
+            dataset.offers.putAll(offers);
             return self();
         }
 

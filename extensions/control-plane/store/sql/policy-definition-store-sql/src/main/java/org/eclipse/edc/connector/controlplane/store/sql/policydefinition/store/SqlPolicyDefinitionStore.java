@@ -53,6 +53,8 @@ public class SqlPolicyDefinitionStore extends AbstractSqlStore implements Policy
     };
     private final TypeReference<List<Duty>> dutyListType = new TypeReference<>() {
     };
+    private final TypeReference<List<String>> profileListType = new TypeReference<>() {
+    };
     private final TypeReference<PolicyType> policyType = new TypeReference<>() {
     };
     private final TypeReference<Map<String, Object>> extensiblePropertiesType = new TypeReference<>() {
@@ -147,6 +149,7 @@ public class SqlPolicyDefinitionStore extends AbstractSqlStore implements Policy
                         toJson(policy.getPermissions(), permissionListType),
                         toJson(policy.getProhibitions(), prohibitionListType),
                         toJson(policy.getObligations(), dutyListType),
+                        toJson(policy.getProfiles(), profileListType),
                         toJson(policy.getExtensibleProperties()),
                         policy.getInheritsFrom(),
                         policy.getAssigner(),
@@ -170,6 +173,7 @@ public class SqlPolicyDefinitionStore extends AbstractSqlStore implements Policy
                         toJson(policy.getPermissions(), permissionListType),
                         toJson(policy.getProhibitions(), prohibitionListType),
                         toJson(policy.getObligations(), dutyListType),
+                        toJson(policy.getProfiles(), profileListType),
                         toJson(policy.getExtensibleProperties()),
                         policy.getInheritsFrom(),
                         policy.getAssigner(),
@@ -189,6 +193,7 @@ public class SqlPolicyDefinitionStore extends AbstractSqlStore implements Policy
                 .permissions(fromJson(resultSet.getString(statements.getPermissionsColumn()), permissionListType))
                 .prohibitions(fromJson(resultSet.getString(statements.getProhibitionsColumn()), prohibitionListType))
                 .duties(fromJson(resultSet.getString(statements.getDutiesColumn()), dutyListType))
+                .profiles(fromJson(resultSet.getString(statements.getProfilesColumn()), profileListType))
                 .extensibleProperties(fromJson(resultSet.getString(statements.getExtensiblePropertiesColumn()), extensiblePropertiesType))
                 .inheritsFrom(resultSet.getString(statements.getInheritsFromColumn()))
                 .assigner(resultSet.getString(statements.getAssignerColumn()))

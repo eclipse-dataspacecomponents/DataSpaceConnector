@@ -24,11 +24,10 @@ import java.util.Set;
  */
 public class RequestScope {
 
-    private RequestScope() {
-    }
-
     private Set<String> scopes = new HashSet<>();
 
+    private RequestScope() {
+    }
 
     public Set<String> getScopes() {
         return scopes;

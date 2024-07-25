@@ -17,6 +17,7 @@ package org.eclipse.edc.keys.keyparsers;
 import org.assertj.core.api.Assertions;
 import org.eclipse.edc.junit.testfixtures.TestUtils;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -74,6 +75,38 @@ class PemParserTest {
                 .isInstanceOf(PublicKey.class);
     }
 
+
+    @ParameterizedTest
+    @ArgumentsSource(PemConvertiblePrivateKeyProvider.class)
+    void parsePublic_withPrivateKey(String pem) {
+        var result = parser.parsePublic(pem);
+        assertThat(result)
+                .isSucceeded()
+                .isNotNull()
+                .isInstanceOf(PublicKey.class);
+
+    }
+
+    @Test
+    void parsePublic_withPrivateKey_whenEd25519_shouldFail() {
+        var pem = TestUtils.getResourceFileContentAsString("ed25519.pem");
+        var result = parser.parsePublic(pem);
+        assertThat(result)
+                .isFailed()
+                .detail().isEqualTo("PEM-encoded structure did not contain a public key.");
+    }
+
+
+    @ParameterizedTest
+    @ArgumentsSource(PemPublicKeyProvider.class)
+    void parsePublic_withPublicKey(String pem) {
+
+        assertThat(parser.parsePublic(pem))
+                .isSucceeded()
+                .isNotNull()
+                .isInstanceOf(PublicKey.class);
+    }
+
     private static class PemPrivateKeyProvider implements ArgumentsProvider {
 
         @Override
@@ -84,6 +117,19 @@ class PemParserTest {
                     Arguments.of(Named.named("EC PrivateKey (P384)", TestUtils.getResourceFileContentAsString("ec_p384.pem"))),
                     Arguments.of(Named.named("EC PrivateKey (P512)", TestUtils.getResourceFileContentAsString("ec_p512.pem"))),
                     Arguments.of(Named.named("Ed25519 PrivateKey", TestUtils.getResourceFileContentAsString("ed25519.pem")))
+            );
+        }
+    }
+
+    private static class PemConvertiblePrivateKeyProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    Arguments.of(Named.named("RSA PrivateKey", TestUtils.getResourceFileContentAsString("rsa_2048.pem"))),
+                    Arguments.of(Named.named("EC PrivateKey (P256)", TestUtils.getResourceFileContentAsString("ec_p256.pem"))),
+                    Arguments.of(Named.named("EC PrivateKey (P384)", TestUtils.getResourceFileContentAsString("ec_p384.pem"))),
+                    Arguments.of(Named.named("EC PrivateKey (P512)", TestUtils.getResourceFileContentAsString("ec_p512.pem")))
             );
         }
     }

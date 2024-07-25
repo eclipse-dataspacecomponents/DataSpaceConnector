@@ -28,7 +28,6 @@ import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCT_FORMAT_ATTRIBU
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DEPRECATED_DCT_FORMAT_ATTRIBUTE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CALLBACK_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_PROPERTY_CONTRACT_AGREEMENT_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_PROPERTY_DATA_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_TYPE_TRANSFER_REQUEST_MESSAGE;
@@ -135,27 +134,6 @@ class JsonObjectToTransferRequestMessageTransformerTest {
 
         assertThat(result).isNull();
         verify(context).reportProblem(anyString());
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void shouldGetConsumerPidFromProcessId_whenFormerIsNotSet() {
-        var json = Json.createObjectBuilder()
-                .add(TYPE, DSPACE_TYPE_TRANSFER_REQUEST_MESSAGE)
-                .add(DSPACE_PROPERTY_CONTRACT_AGREEMENT_ID, contractId)
-                .add(DCT_FORMAT_ATTRIBUTE, destinationType)
-                .add(DSPACE_PROPERTY_CALLBACK_ADDRESS, callbackAddress)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .build();
-
-        var result = transformer.transform(getExpanded(json), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getContractId()).isEqualTo(contractId);
-        assertThat(result.getCallbackAddress()).isEqualTo(callbackAddress);
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
-
-        verify(context, never()).reportProblem(anyString());
     }
 
     private JsonObject createDataAddress() {

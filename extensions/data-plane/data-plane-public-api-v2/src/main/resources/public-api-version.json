@@ -1,0 +1,14 @@
+[
+  {
+    "version": "2.0.0",
+    "urlPath": "/v2",
+    "lastUpdated": "2024-07-10T08:56:00Z",
+    "maturity": "stable"
+  },
+  {
+    "version": "1.0.0",
+    "urlPath": "v1",
+    "lastUpdated": "2024-07-10T08:56:00Z",
+    "maturity": "deprecated"
+  }
+]

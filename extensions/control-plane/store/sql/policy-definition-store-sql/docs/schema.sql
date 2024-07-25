@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS edc_policydefinitions
     permissions           JSON,
     prohibitions          JSON,
     duties                JSON,
+    profiles              JSON,
     extensible_properties JSON,
     inherits_from         VARCHAR,
     assigner              VARCHAR,
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS edc_policydefinitions
 COMMENT ON COLUMN edc_policydefinitions.permissions IS 'Java List<Permission> serialized as JSON';
 COMMENT ON COLUMN edc_policydefinitions.prohibitions IS 'Java List<Prohibition> serialized as JSON';
 COMMENT ON COLUMN edc_policydefinitions.duties IS 'Java List<Duty> serialized as JSON';
+COMMENT ON COLUMN edc_policydefinitions.profiles IS 'Java List<String> serialized as JSON';
 COMMENT ON COLUMN edc_policydefinitions.extensible_properties IS 'Java Map<String, Object> serialized as JSON';
 COMMENT ON COLUMN edc_policydefinitions.policy_type IS 'Java PolicyType serialized as JSON';
 

@@ -86,8 +86,9 @@ public class JwkParser implements KeyParser {
     @Override
     public Result<Key> parse(String encoded) {
         try {
-            var jwk = JWK.parse(encoded);
 
+
+            var jwk = JWK.parse(encoded);
             // OctetKeyPairs (OKP) need special handling, as they can't be easily converted to a Java PrivateKey
             if (jwk instanceof OctetKeyPair okp) {
                 return parseOctetKeyPair(okp).map(key -> key);
@@ -99,6 +100,26 @@ public class JwkParser implements KeyParser {
                     .filter(k -> k instanceof PrivateKey)
                     .findFirst()
                     .or(() -> list.stream().filter(k -> k instanceof PublicKey).findFirst())
+                    .map(Result::success)
+                    .orElse(Result.failure(ERROR_NO_KEY));
+        } catch (ParseException | NoSuchAlgorithmException | IOException | InvalidKeySpecException e) {
+            monitor.warning("Parser error", e);
+            return Result.failure("Parser error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<Key> parsePublic(String encoded) {
+        try {
+            var jwk = JWK.parse(encoded).toPublicJWK();
+            // OctetKeyPairs (OKP) need special handling, as they can't be easily converted to a Java PrivateKey
+            if (jwk instanceof OctetKeyPair okp) {
+                return parseOctetKeyPair(okp.toPublicJWK()).map(key -> key);
+            }
+            var list = KeyConverter.toJavaKeys(List.of(jwk)); // contains an entry each for public and private key
+
+            return list.stream()
+                    .findFirst()
                     .map(Result::success)
                     .orElse(Result.failure(ERROR_NO_KEY));
         } catch (ParseException | NoSuchAlgorithmException | IOException | InvalidKeySpecException e) {

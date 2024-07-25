@@ -31,6 +31,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,7 +50,7 @@ public abstract class PolicyDefinitionStoreTestBase {
     class Create {
 
         @Test
-        @DisplayName("Save a single policy that not exists ")
+        @DisplayName("Save a single policy that does not exist")
         void notExisting() {
             var policy = TestFunctions.createPolicy(getRandomId());
 
@@ -92,7 +93,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("Save a single policy that not exists ")
+        @DisplayName("Save a single policy that does not exist")
         void notExisting_with_privateProperties() {
             var policy = TestFunctions.createPolicy(getRandomId(), null, Map.of("key1", "value1", "key2", "value2"));
 
@@ -105,6 +106,21 @@ public abstract class PolicyDefinitionStoreTestBase {
             assertThat(policyFromDb.getPrivateProperties().get("key1")).usingRecursiveComparison().isEqualTo("value1");
             assertThat(policyFromDb.getPrivateProperties().get("key2")).usingRecursiveComparison().isEqualTo("value2");
         }
+
+        @Test
+        @DisplayName("Save a single policy that does not exist")
+        void notExisting_with_Profile() {
+            var policy = TestFunctions.createPolicy(getRandomId(), null, List.of("value1"));
+
+            getPolicyDefinitionStore().create(policy);
+
+            var policyFromDb = getPolicyDefinitionStore().findById(policy.getId());
+            assertThat(policy).usingRecursiveComparison().isEqualTo(policyFromDb);
+
+            assertThat(policyFromDb.getPolicy().getProfiles()).hasSize(1);
+            assertThat(policyFromDb.getPolicy().getProfiles().get(0)).isEqualTo("value1");
+        }
+
     }
 
     @Nested
@@ -121,7 +137,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("Update an Policy that exists, adding a property")
+        @DisplayName("Update a Policy that exists, adding a property")
         void policyExists() {
             var id = getRandomId();
             var policy = createPolicyDef(id, "target");
@@ -143,7 +159,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("Update an Policy that exists, adding a property")
+        @DisplayName("Update a Policy that exists, adding a property")
         void policyExists_addProperty() {
             var id = getRandomId();
             var policy = createPolicyDef(id, "target");
@@ -167,7 +183,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("Update an Policy that exists, remove a property")
+        @DisplayName("Update a Policy that exists, removing a property")
         void policyExists_removeProperty() {
             var id = getRandomId();
             var policy = createPolicyDef(id, "target");
@@ -190,7 +206,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("Update an Policy that exists, replace a property")
+        @DisplayName("Update a Policy that exists, replacing a property")
         void policyExists_replaceProperty() {
             var id = getRandomId();
             var policy = createPolicyDef(id, "target");
@@ -582,7 +598,7 @@ public abstract class PolicyDefinitionStoreTestBase {
         }
 
         @Test
-        @DisplayName("find all a with property ")
+        @DisplayName("Find all with a property ")
         void findAll_with_privateProperties() {
             var policy1 = TestFunctions.createPolicy(getRandomId(), null, Map.of("key1", "value1", "key2", "value2"));
             var policy2 = TestFunctions.createPolicy(getRandomId(), null, Map.of("key3", "value3", "key4", "value4"));

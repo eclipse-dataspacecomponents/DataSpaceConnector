@@ -21,9 +21,7 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.Con
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.ServiceResult;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 public interface ContractNegotiationService {
 
@@ -42,18 +40,6 @@ public interface ContractNegotiationService {
      * @return the collection of contract negotiations that match the query
      */
     ServiceResult<List<ContractNegotiation>> search(QuerySpec query);
-
-    /**
-     * Query contract negotiations
-     *
-     * @param query request
-     * @return the collection of contract negotiations that match the query
-     * @deprecated please use {@link #search(QuerySpec)}
-     */
-    @Deprecated(since = "0.4.1")
-    default ServiceResult<Stream<ContractNegotiation>> query(QuerySpec query) {
-        return search(query).map(Collection::stream);
-    }
 
     /**
      * Get negotiation state

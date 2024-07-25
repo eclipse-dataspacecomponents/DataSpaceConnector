@@ -16,6 +16,7 @@ package org.eclipse.edc.protocol.dsp.http.dispatcher;
 
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequestMessage;
 import org.eclipse.edc.http.spi.EdcHttpClient;
 import org.eclipse.edc.policy.engine.spi.PolicyContextImpl;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
@@ -107,6 +108,11 @@ public class DspHttpRemoteMessageDispatcherImpl implements DspHttpRemoteMessageD
                     .build();
             var policyProvider = (Function<M, Policy>) policyScope.policyProvider;
             policyEngine.evaluate(policyScope.scope, policyProvider.apply(message), context);
+
+            // catalog request messages can carry additional, user-supplied scopes
+            if (message instanceof CatalogRequestMessage catalogRequestMessage) {
+                catalogRequestMessage.getAdditionalScopes().forEach(requestScopeBuilder::scope);
+            }
 
             var scopes = requestScopeBuilder.build().getScopes();
 

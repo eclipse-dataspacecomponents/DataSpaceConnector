@@ -21,6 +21,9 @@ import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -30,6 +33,7 @@ import java.util.Objects;
 public class CatalogRequestMessage implements RemoteMessage {
 
     private final Policy policy;
+    private List<String> additionalScopes = new ArrayList<>();
     private String protocol = "unknown";
     private String counterPartyAddress;
     private String counterPartyId;
@@ -77,6 +81,10 @@ public class CatalogRequestMessage implements RemoteMessage {
         return policy;
     }
 
+    public List<String> getAdditionalScopes() {
+        return additionalScopes;
+    }
+
     public static class Builder {
         private final CatalogRequestMessage message;
 
@@ -106,6 +114,11 @@ public class CatalogRequestMessage implements RemoteMessage {
 
         public CatalogRequestMessage.Builder querySpec(QuerySpec querySpec) {
             this.message.querySpec = querySpec;
+            return this;
+        }
+
+        public CatalogRequestMessage.Builder additionalScopes(String... additionalScopes) {
+            this.message.additionalScopes = Arrays.asList(additionalScopes);
             return this;
         }
 

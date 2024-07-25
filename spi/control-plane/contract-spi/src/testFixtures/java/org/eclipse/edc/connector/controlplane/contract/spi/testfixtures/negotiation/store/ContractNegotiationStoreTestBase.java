@@ -122,6 +122,7 @@ public abstract class ContractNegotiationStoreTestBase {
         }
     }
 
+    @Deprecated(since = "0.8.0")
     @Nested
     class FindForCorrelationId {
         @Test
@@ -866,41 +867,6 @@ public abstract class ContractNegotiationStoreTestBase {
             leaseEntity(id, "other owner");
 
             var result = getContractNegotiationStore().findByIdAndLease(id);
-
-            assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(ALREADY_LEASED);
-        }
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Nested
-    class FindByCorrelationIdAndLease {
-        @Test
-        void shouldReturnTheEntityAndLeaseIt() {
-            var id = UUID.randomUUID().toString();
-            var correlationId = UUID.randomUUID().toString();
-            getContractNegotiationStore().save(createNegotiationBuilder(id).correlationId(correlationId).build());
-
-            var result = getContractNegotiationStore().findByCorrelationIdAndLease(correlationId);
-
-            assertThat(result).isSucceeded();
-            assertThat(isLeasedBy(id, CONNECTOR_NAME)).isTrue();
-        }
-
-        @Test
-        void shouldReturnNotFound_whenEntityDoesNotExist() {
-            var result = getContractNegotiationStore().findByCorrelationIdAndLease("unexistent");
-
-            assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(NOT_FOUND);
-        }
-
-        @Test
-        void shouldReturnAlreadyLeased_whenEntityIsAlreadyLeased() {
-            var id = UUID.randomUUID().toString();
-            var correlationId = UUID.randomUUID().toString();
-            getContractNegotiationStore().save(createNegotiationBuilder(id).correlationId(correlationId).build());
-            leaseEntity(id, "other owner");
-
-            var result = getContractNegotiationStore().findByCorrelationIdAndLease(correlationId);
 
             assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(ALREADY_LEASED);
         }

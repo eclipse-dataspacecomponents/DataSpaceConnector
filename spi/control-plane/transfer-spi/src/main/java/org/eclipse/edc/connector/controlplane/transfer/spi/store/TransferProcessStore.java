@@ -18,7 +18,6 @@ import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcess
 import org.eclipse.edc.runtime.metamodel.annotation.ExtensionPoint;
 import org.eclipse.edc.spi.persistence.StateEntityStore;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.edc.spi.result.StoreResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Stream;
@@ -48,14 +47,4 @@ public interface TransferProcessStore extends StateEntityStore<TransferProcess> 
      */
     Stream<TransferProcess> findAll(QuerySpec querySpec);
 
-    /**
-     * Find the entity by the passed correlation id and lease it.
-     * If the entity is already leased, will return a failure.
-     *
-     * @param correlationId the entity correlation id.
-     * @return success if the entity is unleased, failure otherwise.
-     * @deprecated it will be deleted in the future
-     */
-    @Deprecated(since = "0.4.1")
-    StoreResult<TransferProcess> findByCorrelationIdAndLease(String correlationId);
 }

@@ -48,6 +48,10 @@ public class LocalPublicKeyServiceImpl implements LocalPublicKeyService {
                 .orElseGet(() -> Result.failure("No public key could be resolved for key-ID '%s'".formatted(id)));
     }
 
+    public Result<Void> addRawKey(String id, String rawKey) {
+        return parseKey(rawKey).onSuccess((pk) -> cachedKeys.put(id, pk)).mapEmpty();
+    }
+
     private Optional<String> resolveFromVault(String id) {
         return Optional.ofNullable(vault.resolveSecret(id));
     }
@@ -57,16 +61,6 @@ public class LocalPublicKeyServiceImpl implements LocalPublicKeyService {
     }
 
     private Result<PublicKey> parseKey(String encodedKey) {
-        return registry.parse(encodedKey).compose(pk -> {
-            if (pk instanceof PublicKey publicKey) {
-                return Result.success(publicKey);
-            } else {
-                return Result.failure("The specified resource did not contain public key material.");
-            }
-        });
-    }
-
-    public Result<Void> addRawKey(String id, String rawKey) {
-        return parseKey(rawKey).onSuccess((pk) -> cachedKeys.put(id, pk)).mapTo();
+        return registry.parsePublic(encodedKey);
     }
 }

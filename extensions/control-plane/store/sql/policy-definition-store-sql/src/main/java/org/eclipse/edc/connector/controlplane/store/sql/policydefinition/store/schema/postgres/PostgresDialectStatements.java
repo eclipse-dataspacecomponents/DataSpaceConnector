@@ -32,6 +32,7 @@ public class PostgresDialectStatements extends BaseSqlDialectStatements {
     public static final String PERMISSIONS_ALIAS = "perm";
     public static final String OBLIGATIONS_ALIAS = "oblig";
     public static final String EXT_PROPERTIES_ALIAS = "extprop";
+    public static final String PROFILES_ALIES = "prof";
     private static final String PRIVATE_PROPERTIES = "privateProperties.";
     private static final String SELECT_QUERY = "SELECT * FROM %s";
 
@@ -54,6 +55,9 @@ public class PostgresDialectStatements extends BaseSqlDialectStatements {
             return new SqlQueryStatement(select, querySpec, new PolicyDefinitionMapping(this), operatorTranslator);
         } else if (querySpec.containsAnyLeftOperand("policy.obligations")) {
             var select = getSelectFromJsonArrayTemplate(getSelectTemplate(), getDutiesColumn(), OBLIGATIONS_ALIAS);
+            return new SqlQueryStatement(select, querySpec, new PolicyDefinitionMapping(this), operatorTranslator);
+        } else if (querySpec.containsAnyLeftOperand("policy.profiles")) {
+            var select = getSelectFromJsonArrayTemplate(getSelectTemplate(), getProfilesColumn(), PROFILES_ALIES);
             return new SqlQueryStatement(select, querySpec, new PolicyDefinitionMapping(this), operatorTranslator);
         } else if (querySpec.containsAnyLeftOperand("policy.extensibleProperties")) {
             var select = getSelectFromJsonArrayTemplate(getSelectTemplate(), getExtensiblePropertiesColumn(), EXT_PROPERTIES_ALIAS);

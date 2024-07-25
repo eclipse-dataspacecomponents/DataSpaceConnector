@@ -27,9 +27,7 @@ import org.eclipse.edc.spi.result.ServiceResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Mediates access to and modification of {@link TransferProcess}es.
@@ -52,18 +50,6 @@ public interface TransferProcessService {
      * @return the collection of transferProcesses that match the query
      */
     ServiceResult<List<TransferProcess>> search(QuerySpec query);
-
-    /**
-     * Query transferProcess.
-     *
-     * @param query request
-     * @return the collection of transferProcesses that match the query
-     * @deprecated please use {@link #search(QuerySpec)}
-     */
-    @Deprecated(since = "0.4.1")
-    default ServiceResult<Stream<TransferProcess>> query(QuerySpec query) {
-        return search(query).map(Collection::stream);
-    }
 
     /**
      * Returns the state of a transferProcess by its id.

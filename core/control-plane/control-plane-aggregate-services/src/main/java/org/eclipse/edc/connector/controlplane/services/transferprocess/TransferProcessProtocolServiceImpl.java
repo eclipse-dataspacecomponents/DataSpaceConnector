@@ -321,8 +321,6 @@ public class TransferProcessProtocolServiceImpl implements TransferProcessProtoc
     private ServiceResult<TransferProcess> findAndLease(TransferRemoteMessage remoteMessage) {
         return transferProcessStore
                 .findByIdAndLease(remoteMessage.getProcessId())
-                // recover needed to maintain backward compatibility when there was no distinction between providerPid and consumerPid
-                .recover(it -> transferProcessStore.findByCorrelationIdAndLease(remoteMessage.getProcessId()))
                 .flatMap(ServiceResult::from);
     }
 

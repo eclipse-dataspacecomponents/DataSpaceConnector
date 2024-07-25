@@ -23,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_PROPERTY_DATA_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_TYPE_TRANSFER_START_MESSAGE;
@@ -38,32 +37,22 @@ public class JsonObjectToTransferStartMessageTransformer extends AbstractJsonLdT
     public @Nullable TransferStartMessage transform(@NotNull JsonObject messageObject, @NotNull TransformerContext context) {
         var builder = TransferStartMessage.Builder.newInstance();
 
-        var processId = transformString(messageObject.get(DSPACE_PROPERTY_PROCESS_ID), context);
-
         if (!transformMandatoryString(messageObject.get(DSPACE_PROPERTY_CONSUMER_PID), builder::consumerPid, context)) {
-            if (processId == null) {
-                context.problem()
-                        .missingProperty()
-                        .type(DSPACE_TYPE_TRANSFER_START_MESSAGE)
-                        .property(DSPACE_PROPERTY_CONSUMER_PID)
-                        .report();
-                return null;
-            } else {
-                builder.consumerPid(processId);
-            }
+            context.problem()
+                    .missingProperty()
+                    .type(DSPACE_TYPE_TRANSFER_START_MESSAGE)
+                    .property(DSPACE_PROPERTY_CONSUMER_PID)
+                    .report();
+            return null;
         }
 
         if (!transformMandatoryString(messageObject.get(DSPACE_PROPERTY_PROVIDER_PID), builder::providerPid, context)) {
-            if (processId == null) {
-                context.problem()
-                        .missingProperty()
-                        .type(DSPACE_TYPE_TRANSFER_START_MESSAGE)
-                        .property(DSPACE_PROPERTY_PROVIDER_PID)
-                        .report();
-                return null;
-            } else {
-                builder.providerPid(processId);
-            }
+            context.problem()
+                    .missingProperty()
+                    .type(DSPACE_TYPE_TRANSFER_START_MESSAGE)
+                    .property(DSPACE_PROPERTY_PROVIDER_PID)
+                    .report();
+            return null;
         }
 
         var dataAddressObject = returnJsonObject(messageObject.get(DSPACE_PROPERTY_DATA_ADDRESS), context, DSPACE_PROPERTY_DATA_ADDRESS, false);

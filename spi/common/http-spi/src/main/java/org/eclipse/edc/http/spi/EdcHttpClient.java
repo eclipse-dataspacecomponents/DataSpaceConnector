@@ -69,17 +69,6 @@ public interface EdcHttpClient {
     <T> Result<T> execute(Request request, List<FallbackFactory> fallbacks, Function<Response, Result<T>> mappingFunction);
 
     /**
-     * Executes the specified request asynchronously, maps the response with the mappingFunction.
-     *
-     * @param request the {@link Request}.
-     * @param mappingFunction the function that will be applied to the {@link Response}.
-     * @return a {@link CompletableFuture} containing the result value.
-     * @deprecated please use {{@link #executeAsync(Request, List)}} passing an empty list for fallbacks.
-     */
-    @Deprecated(since = "0.4.1")
-    <T> CompletableFuture<T> executeAsync(Request request, Function<Response, T> mappingFunction);
-
-    /**
      * Executes the specified request asynchronously and returns the response.
      * Accepts a list of {@link FallbackFactories} that could apply retry in particular occasions.
      *
@@ -88,19 +77,6 @@ public interface EdcHttpClient {
      * @return a {@link CompletableFuture} containing the {@link Response} instance.
      */
     CompletableFuture<Response> executeAsync(Request request, List<FallbackFactory> fallbacks);
-
-    /**
-     * Executes the specified request asynchronously, maps the response with the mappingFunction.
-     * Accepts a list of {@link FallbackFactories} that could apply retry in particular occasions.
-     *
-     * @param request the {@link Request}.
-     * @param fallbacks a list of fallbacks to be applied.
-     * @param mappingFunction the function that will be applied to the {@link Response}.
-     * @return a {@link CompletableFuture} containing the result value.
-     * @deprecated please use {{@link #executeAsync(Request, List)}}.
-     */
-    @Deprecated(since = "0.4.1")
-    <T> CompletableFuture<T> executeAsync(Request request, List<FallbackFactory> fallbacks, Function<Response, T> mappingFunction);
 
     /**
      * Returns a new client instance with a custom dns server set.

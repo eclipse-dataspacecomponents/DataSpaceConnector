@@ -20,6 +20,9 @@ plugins {
 dependencies {
     api(project(":spi:common:core-spi"))
     api(project(":spi:control-plane:asset-spi"))
+
+    testImplementation(project(":core:common:lib:json-lib"))
+
 }
 
 

@@ -18,6 +18,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import org.eclipse.edc.spi.query.QuerySpec;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 
 public class CatalogRequest {
@@ -27,13 +30,18 @@ public class CatalogRequest {
     public static final String CATALOG_REQUEST_COUNTER_PARTY_ADDRESS = EDC_NAMESPACE + "counterPartyAddress";
     public static final String CATALOG_REQUEST_COUNTER_PARTY_ID = EDC_NAMESPACE + "counterPartyId";
     public static final String CATALOG_REQUEST_QUERY_SPEC = EDC_NAMESPACE + "querySpec";
-
+    public static final String CATALOG_REQUEST_ADDITIONAL_SCOPES = EDC_NAMESPACE + "additionalScopes";
+    private List<String> additionalScopes = new ArrayList<>();
     private QuerySpec querySpec;
     private String counterPartyAddress;
     private String counterPartyId;
     private String protocol;
 
     private CatalogRequest() {
+    }
+
+    public List<String> getAdditionalScopes() {
+        return additionalScopes;
     }
 
     public String getCounterPartyAddress() {
@@ -82,6 +90,16 @@ public class CatalogRequest {
 
         public Builder protocol(String protocol) {
             instance.protocol = protocol;
+            return this;
+        }
+
+        public Builder additionalScopes(List<String> additionalScopes) {
+            instance.additionalScopes = additionalScopes;
+            return this;
+        }
+
+        public Builder additionalScope(String additionalScope) {
+            instance.additionalScopes.add(additionalScope);
             return this;
         }
 

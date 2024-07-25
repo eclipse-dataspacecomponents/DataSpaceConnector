@@ -339,7 +339,6 @@ class ContractNegotiationProtocolServiceImplTest {
         when(protocolTokenValidator.verify(eq(tokenRepresentation), eq(CONTRACT_NEGOTIATION_REQUEST_SCOPE), any(), eq(message)))
                 .thenReturn(ServiceResult.success(participantAgent()));
         when(store.findByIdAndLease(any())).thenReturn(StoreResult.notFound("not found"));
-        when(store.findByCorrelationIdAndLease(any())).thenReturn(StoreResult.notFound("not found"));
 
         // currently ContractRequestMessage cannot happen on an already existing negotiation
         if (!(message instanceof ContractRequestMessage)) {
@@ -708,7 +707,6 @@ class ContractNegotiationProtocolServiceImplTest {
             when(protocolTokenValidator.verify(eq(tokenRepresentation), eq(CONTRACT_NEGOTIATION_REQUEST_SCOPE), any(), eq(message)))
                     .thenReturn(ServiceResult.success(participantAgent()));
             when(store.findByIdAndLease(any())).thenReturn(StoreResult.notFound("not found"));
-            when(store.findByCorrelationIdAndLease(any())).thenReturn(StoreResult.notFound("not found"));
 
             var result = service.notifyOffered(message, tokenRepresentation);
 

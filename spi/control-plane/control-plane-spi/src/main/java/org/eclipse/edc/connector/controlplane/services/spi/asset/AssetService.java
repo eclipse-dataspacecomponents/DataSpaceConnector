@@ -18,9 +18,7 @@ import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.ServiceResult;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 public interface AssetService {
 
@@ -39,18 +37,6 @@ public interface AssetService {
      * @return the collection of assets that matches the query
      */
     ServiceResult<List<Asset>> search(QuerySpec query);
-
-    /**
-     * Query assets
-     *
-     * @param query request
-     * @return the collection of assets that matches the query
-     * @deprecated please use {@link #search(QuerySpec)}
-     */
-    @Deprecated(since = "0.4.1")
-    default ServiceResult<Stream<Asset>> query(QuerySpec query) {
-        return search(query).map(Collection::stream);
-    }
 
     /**
      * Create an asset

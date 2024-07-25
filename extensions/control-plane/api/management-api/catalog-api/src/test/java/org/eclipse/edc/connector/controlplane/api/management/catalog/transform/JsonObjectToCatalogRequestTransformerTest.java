@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.connector.controlplane.api.management.catalog.transform;
 
+import com.apicatalog.jsonld.document.JsonDocument;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest;
@@ -21,7 +22,11 @@ import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
+import static com.apicatalog.jsonld.JsonLd.expand;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_ADDITIONAL_SCOPES;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_COUNTER_PARTY_ADDRESS;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_COUNTER_PARTY_ID;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_PROTOCOL;
@@ -92,6 +97,48 @@ class JsonObjectToCatalogRequestTransformerTest {
     }
 
     @Test
+    void transform_withAdditionalScopes() {
+        var querySpec = QuerySpec.Builder.newInstance().build();
+        var querySpecJson = Json.createObjectBuilder().build();
+        when(context.transform(any(), eq(QuerySpec.class))).thenReturn(querySpec);
+        var json = Json.createObjectBuilder()
+                .add(TYPE, CATALOG_REQUEST_TYPE)
+                .add(CATALOG_REQUEST_PROTOCOL, "protocol")
+                .add(CATALOG_REQUEST_COUNTER_PARTY_ADDRESS, "http://provider/url")
+                .add(CATALOG_REQUEST_COUNTER_PARTY_ID, "counterPartyId")
+                .add(CATALOG_REQUEST_QUERY_SPEC, querySpecJson)
+                .add(CATALOG_REQUEST_ADDITIONAL_SCOPES, Json.createArrayBuilder(List.of("scope1", "scope2")).build())
+                .build();
+
+        var result = transformer.transform(getExpanded(json), context);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAdditionalScopes()).containsExactlyInAnyOrder("scope1", "scope2");
+        verify(context).transform(querySpecJson, QuerySpec.class);
+    }
+
+    @Test
+    void transform_withAdditionalScopes_singleObject() {
+        var querySpec = QuerySpec.Builder.newInstance().build();
+        var querySpecJson = Json.createObjectBuilder().build();
+        when(context.transform(any(), eq(QuerySpec.class))).thenReturn(querySpec);
+        var json = Json.createObjectBuilder()
+                .add(TYPE, CATALOG_REQUEST_TYPE)
+                .add(CATALOG_REQUEST_PROTOCOL, "protocol")
+                .add(CATALOG_REQUEST_COUNTER_PARTY_ADDRESS, "http://provider/url")
+                .add(CATALOG_REQUEST_COUNTER_PARTY_ID, "counterPartyId")
+                .add(CATALOG_REQUEST_QUERY_SPEC, querySpecJson)
+                .add(CATALOG_REQUEST_ADDITIONAL_SCOPES, "scope1")
+                .build();
+
+        var result = transformer.transform(getExpanded(json), context);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAdditionalScopes()).containsExactly("scope1");
+        verify(context).transform(querySpecJson, QuerySpec.class);
+    }
+
+    @Test
     void transform_shouldHandleEmptyQuerySpec() {
         var json = Json.createObjectBuilder()
                 .add(TYPE, CATALOG_REQUEST_TYPE)
@@ -106,4 +153,11 @@ class JsonObjectToCatalogRequestTransformerTest {
         verifyNoInteractions(context);
     }
 
+    private JsonObject getExpanded(JsonObject message) {
+        try {
+            return expand(JsonDocument.of(message)).get().asJsonArray().getJsonObject(0);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
 }

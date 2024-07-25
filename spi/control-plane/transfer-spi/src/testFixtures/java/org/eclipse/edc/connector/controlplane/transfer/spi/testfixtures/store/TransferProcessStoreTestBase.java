@@ -979,38 +979,4 @@ public abstract class TransferProcessStoreTestBase {
         }
     }
 
-    @Nested
-    class FindByCorrelationIdAndLease {
-        @Test
-        void shouldReturnTheEntityAndLeaseIt() {
-            var id = UUID.randomUUID().toString();
-            var correlationId = UUID.randomUUID().toString();
-            getTransferProcessStore().save(TestFunctions.createTransferProcessBuilder(id).correlationId(correlationId).build());
-
-            var result = getTransferProcessStore().findByCorrelationIdAndLease(correlationId);
-
-            assertThat(result).isSucceeded();
-            assertThat(isLeasedBy(id, CONNECTOR_NAME)).isTrue();
-        }
-
-        @Test
-        void shouldReturnNotFound_whenEntityDoesNotExist() {
-            var result = getTransferProcessStore().findByCorrelationIdAndLease("unexistent");
-
-            assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(NOT_FOUND);
-        }
-
-        @Test
-        void shouldReturnAlreadyLeased_whenEntityIsAlreadyLeased() {
-            var id = UUID.randomUUID().toString();
-            var correlationId = UUID.randomUUID().toString();
-            getTransferProcessStore().save(TestFunctions.createTransferProcessBuilder(id).correlationId(correlationId).build());
-            leaseEntity(id, "other owner");
-
-            var result = getTransferProcessStore().findByCorrelationIdAndLease(correlationId);
-
-            assertThat(result).isFailed().extracting(StoreFailure::getReason).isEqualTo(ALREADY_LEASED);
-        }
-    }
-
 }

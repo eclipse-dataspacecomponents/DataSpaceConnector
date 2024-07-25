@@ -62,11 +62,7 @@ public class PemParser implements KeyParser {
     @Override
     public Result<Key> parse(String encoded) {
 
-        var matcher = PEM_FORMAT_REGEX.matcher(encoded);
-        if (!matcher.find()) {
-            return Result.failure("The given input is not valid PEM.");
-        }
-        var keypair = parseKeys(encoded);
+        var keypair = parsePem(encoded);
 
         if (keypair.succeeded()) {
 
@@ -83,7 +79,38 @@ public class PemParser implements KeyParser {
                     .orElseGet(() -> Result.failure("PEM-encoded structure did not contain a private key."));
         }
 
-        return keypair.mapTo();
+        return keypair.mapEmpty();
+    }
+
+    @Override
+    public Result<Key> parsePublic(String encoded) {
+
+        var keypair = parsePem(encoded);
+        if (keypair.succeeded()) {
+
+            var keyPairList = keypair.getContent();
+            if (keyPairList.size() > 1) {
+                monitor.warning("PEM expected to contain exactly 1 key(-pair), but contained %s. Will take the first one. Please consider re-structuring your PEM document.".formatted(keyPairList.size()));
+            }
+            return keyPairList
+                    .stream()
+                    .filter(Objects::nonNull) // PEM strings that only contain public keys would get eliminated here
+                    .map(keyPair -> (Key) keyPair.getPublic())
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(Result::success)
+                    .orElseGet(() -> Result.failure("PEM-encoded structure did not contain a public key."));
+        }
+
+        return keypair.mapEmpty();
+    }
+
+    private Result<List<KeyPair>> parsePem(String pemEncoded) {
+        var matcher = PEM_FORMAT_REGEX.matcher(pemEncoded);
+        if (!matcher.find()) {
+            return Result.failure("The given input is not valid PEM.");
+        }
+        return parseKeys(pemEncoded);
     }
 
     /**

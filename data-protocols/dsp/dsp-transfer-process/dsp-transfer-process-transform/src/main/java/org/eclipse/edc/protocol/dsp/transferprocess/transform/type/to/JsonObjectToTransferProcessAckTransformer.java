@@ -22,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_STATE;
 
@@ -38,14 +37,8 @@ public class JsonObjectToTransferProcessAckTransformer extends AbstractJsonLdTra
     @Override
     public @Nullable TransferProcessAck transform(@NotNull JsonObject jsonObject, @NotNull TransformerContext context) {
         var builder = TransferProcessAck.Builder.newInstance();
-        var processId = transformString(jsonObject.get(DSPACE_PROPERTY_PROCESS_ID), context);
-        if (!transformMandatoryString(jsonObject.get(DSPACE_PROPERTY_CONSUMER_PID), builder::consumerPid, context)) {
-            builder.consumerPid(processId);
-        }
-
-        if (!transformMandatoryString(jsonObject.get(DSPACE_PROPERTY_PROVIDER_PID), builder::providerPid, context)) {
-            builder.providerPid(processId);
-        }
+        transformMandatoryString(jsonObject.get(DSPACE_PROPERTY_CONSUMER_PID), builder::consumerPid, context);
+        transformMandatoryString(jsonObject.get(DSPACE_PROPERTY_PROVIDER_PID), builder::providerPid, context);
 
         return builder
                 .state(transformString(jsonObject.get(DSPACE_PROPERTY_STATE), context))

@@ -15,6 +15,7 @@
 
 package org.eclipse.edc.connector.controlplane.catalog.spi;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
@@ -25,6 +26,7 @@ import java.util.List;
  * Entity representing a Catalog
  */
 @JsonDeserialize(builder = Catalog.Builder.class)
+@JsonTypeName("dataspaceconnector:catalog")
 public class Catalog extends Dataset {
     protected final List<Dataset> datasets = new ArrayList<>();
     protected List<DataService> dataServices = new ArrayList<>();

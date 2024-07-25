@@ -18,7 +18,6 @@ import org.eclipse.edc.connector.controlplane.transfer.spi.store.TransferProcess
 import org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcess;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.store.InMemoryStatefulEntityStore;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +25,6 @@ import java.time.Clock;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static org.eclipse.edc.spi.query.Criterion.criterion;
 
 /**
@@ -57,16 +55,6 @@ public class InMemoryTransferProcessStore extends InMemoryStatefulEntityStore<Tr
     @Override
     public Stream<TransferProcess> findAll(QuerySpec querySpec) {
         return super.findAll(querySpec);
-    }
-
-    @Override
-    public StoreResult<TransferProcess> findByCorrelationIdAndLease(String correlationId) {
-        var transferProcess = findForCorrelationId(correlationId);
-        if (transferProcess == null) {
-            return StoreResult.notFound(format("TransferProcess with correlationId %s not found", correlationId));
-        }
-
-        return findByIdAndLease(transferProcess.getId());
     }
 
 }

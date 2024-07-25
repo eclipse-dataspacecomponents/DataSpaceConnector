@@ -28,7 +28,6 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTyp
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_REQUEST_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CALLBACK_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 
 /**
@@ -45,17 +44,12 @@ public class JsonObjectToContractRequestMessageTransformer extends AbstractJsonL
         var builder = ContractRequestMessage.Builder.newInstance();
 
         if (!transformMandatoryString(requestObject.get(DSPACE_PROPERTY_CONSUMER_PID), builder::consumerPid, context)) {
-            var processId = requestObject.get(DSPACE_PROPERTY_PROCESS_ID);
-            if (processId == null) {
-                context.problem()
-                        .missingProperty()
-                        .type(DSPACE_TYPE_CONTRACT_REQUEST_MESSAGE)
-                        .property(DSPACE_PROPERTY_CONSUMER_PID)
-                        .report();
-                return null;
-            } else {
-                builder.consumerPid(transformString(processId, context));
-            }
+            context.problem()
+                    .missingProperty()
+                    .type(DSPACE_TYPE_CONTRACT_REQUEST_MESSAGE)
+                    .property(DSPACE_PROPERTY_CONSUMER_PID)
+                    .report();
+            return null;
         }
 
         var providerPid = requestObject.get(DSPACE_PROPERTY_PROVIDER_PID);

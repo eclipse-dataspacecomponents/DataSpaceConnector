@@ -66,6 +66,10 @@ public interface SqlPolicyStoreStatements extends SqlStatements {
         return "duties";
     }
 
+    default String getProfilesColumn() {
+        return "profiles";
+    }
+
     default String getExtensiblePropertiesColumn() {
         return "extensible_properties";
     }

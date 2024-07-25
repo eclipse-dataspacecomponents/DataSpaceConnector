@@ -34,7 +34,6 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTyp
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_OFFER_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CALLBACK_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -94,39 +93,6 @@ class JsonObjectToContractOfferMessageTransformerTest {
 
         verify(context, never()).reportProblem(anyString());
         verify(context).setData(Policy.class, TYPE, PolicyType.OFFER);
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void transform_shouldReturnMessage_whenValidJsonObject_processId() {
-        var message = jsonFactory.createObjectBuilder()
-                .add(ID, MESSAGE_ID)
-                .add(JsonLdKeywords.TYPE, DSPACE_TYPE_CONTRACT_OFFER_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .add(DSPACE_PROPERTY_CALLBACK_ADDRESS, CALLBACK_ADDRESS)
-                .add(DSPACE_PROPERTY_OFFER, jsonFactory.createObjectBuilder()
-                        .add(ID, CONTRACT_OFFER_ID)
-                        .build())
-                .build();
-        var policy = policy();
-
-        when(context.transform(any(JsonObject.class), eq(Policy.class))).thenReturn(policy);
-
-        var result = transformer.transform(message, context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getProtocol()).isNotEmpty();
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
-        assertThat(result.getProviderPid()).isEqualTo("processId");
-        assertThat(result.getCallbackAddress()).isEqualTo(CALLBACK_ADDRESS);
-
-        var contractOffer = result.getContractOffer();
-        assertThat(contractOffer).isNotNull();
-        assertThat(contractOffer.getId()).isEqualTo(CONTRACT_OFFER_ID);
-        assertThat(contractOffer.getPolicy()).isEqualTo(policy);
-        assertThat(contractOffer.getAssetId()).isEqualTo(ASSET_ID);
-
-        verify(context, never()).reportProblem(anyString());
     }
 
     @Test

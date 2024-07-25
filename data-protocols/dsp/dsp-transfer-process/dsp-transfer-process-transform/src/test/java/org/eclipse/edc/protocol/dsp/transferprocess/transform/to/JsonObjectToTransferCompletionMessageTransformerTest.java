@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_TYPE_TRANSFER_COMPLETION_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.transferprocess.transform.to.TestInput.getExpanded;
@@ -71,20 +70,4 @@ class JsonObjectToTransferCompletionMessageTransformerTest {
         verify(context).reportProblem(anyString());
     }
 
-    @Deprecated(since = "0.4.1")
-    @Test
-    void shouldSetProcessIdAsConsumerAndProviderPid_whenProcessIdIsSet() {
-        var json = Json.createObjectBuilder()
-                .add(TYPE, DSPACE_TYPE_TRANSFER_COMPLETION_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "TestProcessId")
-                .build();
-
-        var result = transformer.transform(getExpanded(json), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getConsumerPid()).isEqualTo("TestProcessId");
-        assertThat(result.getProviderPid()).isEqualTo("TestProcessId");
-
-        verify(context, never()).reportProblem(anyString());
-    }
 }

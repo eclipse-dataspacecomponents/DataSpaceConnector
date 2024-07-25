@@ -50,7 +50,8 @@ public abstract class BaseCatalogApiController {
         var request = transformerRegistry.transform(requestBody, CatalogRequest.class)
                 .orElseThrow(InvalidRequestException::new);
 
-        service.requestCatalog(request.getCounterPartyId(), request.getCounterPartyAddress(), request.getProtocol(), request.getQuerySpec())
+        var scopes = request.getAdditionalScopes().toArray(new String[0]);
+        service.requestCatalog(request.getCounterPartyId(), request.getCounterPartyAddress(), request.getProtocol(), request.getQuerySpec(), scopes)
                 .whenComplete((result, throwable) -> {
                     try {
                         response.resume(toResponse(result, throwable));

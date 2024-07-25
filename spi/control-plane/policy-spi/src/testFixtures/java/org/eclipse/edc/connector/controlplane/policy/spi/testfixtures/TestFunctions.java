@@ -47,6 +47,16 @@ public class TestFunctions {
                 .build();
     }
 
+    public static PolicyDefinition createPolicy(String id, String target, List<String> profiles) {
+        var policy = createPolicyBuilder(id).profiles(profiles).target(target).build();
+
+        return PolicyDefinition.Builder.newInstance()
+                .createdAt(Clock.systemUTC().millis())
+                .id(id)
+                .policy(policy)
+                .build();
+    }
+
     public static PolicyDefinition createPolicy(String id, String target, Map<String, Object> privateProperties) {
         var policy = createPolicyBuilder(id).target(target).build();
 

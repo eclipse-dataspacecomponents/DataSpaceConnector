@@ -63,6 +63,23 @@ class JwkParserTest {
         assertThat(result).isSucceeded().isInstanceOf(PublicKey.class);
     }
 
+
+    @ParameterizedTest
+    @ArgumentsSource(KeyProvider.class)
+    void parsePublic_withPublicKey(JWK jwk) {
+        var publickey = jwk.toPublicJWK();
+        var result = parser.parsePublic(publickey.toJSONString());
+        assertThat(result).isSucceeded().isInstanceOf(PublicKey.class);
+    }
+
+
+    @ParameterizedTest
+    @ArgumentsSource(KeyProvider.class)
+    void parsePublic_withPrivateKey(JWK jwk) {
+        var result = parser.parsePublic(jwk.toJSONString());
+        assertThat(result).isSucceeded().isInstanceOf(PublicKey.class);
+    }
+
     private static class KeyProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {

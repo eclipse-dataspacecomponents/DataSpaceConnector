@@ -21,7 +21,6 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.Con
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.query.QueryResolver;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.store.InMemoryStatefulEntityStore;
 import org.eclipse.edc.store.ReflectionBasedQueryResolver;
 import org.jetbrains.annotations.NotNull;
@@ -84,16 +83,6 @@ public class InMemoryContractNegotiationStore extends InMemoryStatefulEntityStor
     @Override
     public @NotNull Stream<ContractAgreement> queryAgreements(QuerySpec querySpec) {
         return agreementQueryResolver.query(getAgreements(), querySpec);
-    }
-
-    @Override
-    public StoreResult<ContractNegotiation> findByCorrelationIdAndLease(String correlationId) {
-        var negotiation = findForCorrelationId(correlationId);
-        if (negotiation == null) {
-            return StoreResult.notFound(format("ContractNegotiation with correlationId %s not found", correlationId));
-        }
-
-        return findByIdAndLease(negotiation.getId());
     }
 
     @NotNull

@@ -19,6 +19,7 @@ import org.eclipse.edc.validator.jsonobject.JsonLdPath;
 import org.eclipse.edc.validator.jsonobject.JsonObjectValidator;
 import org.eclipse.edc.validator.jsonobject.validators.MandatoryObject;
 import org.eclipse.edc.validator.jsonobject.validators.MandatoryValue;
+import org.eclipse.edc.validator.jsonobject.validators.OptionalIdArray;
 import org.eclipse.edc.validator.jsonobject.validators.OptionalIdNotBlank;
 import org.eclipse.edc.validator.jsonobject.validators.TypeIs;
 import org.eclipse.edc.validator.spi.ValidationResult;
@@ -41,6 +42,7 @@ import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_OPERATOR_ATTR
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_OR_CONSTRAINT_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PERMISSION_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_SET;
+import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROFILE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROHIBITION_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_REMEDY_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_RIGHT_OPERAND_ATTRIBUTE;
@@ -62,7 +64,8 @@ public class PolicyDefinitionValidator {
                     .verify(path -> new TypeIs(path, ODRL_POLICY_TYPE_SET))
                     .verifyArrayItem(ODRL_PERMISSION_ATTRIBUTE, PermissionValidator::instance)
                     .verifyArrayItem(ODRL_OBLIGATION_ATTRIBUTE, DutyValidator::instance)
-                    .verifyArrayItem(ODRL_PROHIBITION_ATTRIBUTE, ProhibitionValidator::instance);
+                    .verifyArrayItem(ODRL_PROHIBITION_ATTRIBUTE, ProhibitionValidator::instance)
+                    .verify(ProfileValidator::new);
         }
     }
 
@@ -102,6 +105,16 @@ public class PolicyDefinitionValidator {
 
     }
 
+    private record ProfileValidator(JsonLdPath path) implements Validator<JsonObject> {
+        @Override
+        public ValidationResult validate(JsonObject input) {
+            return JsonObjectValidator.newValidator()
+                    .verify(ODRL_PROFILE_ATTRIBUTE, OptionalIdArray.min(1))
+                    .build()
+                    .validate(input);
+        }
+    }
+
     private static class ConsequenceValidator {
         public static JsonObjectValidator.Builder instance(JsonObjectValidator.Builder builder) {
 
@@ -120,7 +133,6 @@ public class PolicyDefinitionValidator {
                     .map(it -> ValidationResult.success())
                     .orElse(ValidationResult.failure(violation(format("%s is mandatory but missing or null", path.append(ODRL_ACTION_ATTRIBUTE)), ODRL_ACTION_ATTRIBUTE)));
         }
-
     }
 
     private record ConstraintValidator(JsonLdPath path) implements Validator<JsonObject> {
@@ -134,7 +146,15 @@ public class PolicyDefinitionValidator {
 
         @Override
         public ValidationResult validate(JsonObject input) {
-            if (LOGICAL_CONSTRAINTS.stream().anyMatch(input::containsKey)) {
+            var logicalOperands = input.keySet().stream().filter(LOGICAL_CONSTRAINTS::contains).toList();
+
+            if (logicalOperands.size() > 1) {
+                return ValidationResult.failure(
+                        violation("Cannot define multiple operands in a Logical Constraint: %s".formatted(logicalOperands),
+                                path.toString()));
+            }
+
+            if (logicalOperands.size() == 1) {
                 return ValidationResult.success();
             }
 

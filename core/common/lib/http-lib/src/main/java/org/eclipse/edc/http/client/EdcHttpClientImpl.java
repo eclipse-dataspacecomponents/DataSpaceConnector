@@ -75,11 +75,6 @@ public class EdcHttpClientImpl implements EdcHttpClient {
     }
 
     @Override
-    public <T> CompletableFuture<T> executeAsync(Request request, Function<Response, T> mappingFunction) {
-        return executeAsync(request, emptyList(), mappingFunction);
-    }
-
-    @Override
     public CompletableFuture<Response> executeAsync(Request request, List<FallbackFactory> fallbacks) {
         var call = okHttpClient.newCall(request);
         var builder = with(retryPolicy);
@@ -87,16 +82,6 @@ public class EdcHttpClientImpl implements EdcHttpClient {
 
         return builder.compose(call)
                 .executeAsync();
-    }
-
-    @Override
-    public <T> CompletableFuture<T> executeAsync(Request request, List<FallbackFactory> fallbacks, Function<Response, T> mappingFunction) {
-        return executeAsync(request, fallbacks)
-                .thenApply(response -> {
-                    try (response) {
-                        return mappingFunction.apply(response);
-                    }
-                });
     }
 
     @Override

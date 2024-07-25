@@ -37,7 +37,6 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTyp
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_REQUEST_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CALLBACK_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -84,35 +83,6 @@ class JsonObjectToContractRequestMessageTransformerTest {
         assertThat(result.getProtocol()).isNotEmpty();
         assertThat(result.getConsumerPid()).isEqualTo("consumerPid");
         assertThat(result.getProviderPid()).isEqualTo("providerPid");
-        assertThat(result.getCallbackAddress()).isEqualTo(CALLBACK);
-
-        var contractOffer = result.getContractOffer();
-        assertThat(contractOffer).isNotNull();
-        assertThat(contractOffer.getId()).isNotNull();
-        assertThat(contractOffer.getPolicy()).isNotNull();
-        assertThat(contractOffer.getAssetId()).isEqualTo("target");
-
-        verify(context, never()).reportProblem(anyString());
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void verify_processId() {
-        var message = jsonFactory.createObjectBuilder()
-                .add(JsonLdKeywords.ID, OBJECT_ID)
-                .add(JsonLdKeywords.TYPE, DSPACE_TYPE_CONTRACT_REQUEST_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .add(DSPACE_PROPERTY_CALLBACK_ADDRESS, CALLBACK)
-                .add(DSPACE_PROPERTY_OFFER, contractOffer())
-                .build();
-
-        when(context.transform(any(JsonObject.class), eq(Policy.class))).thenReturn(policy());
-
-        var result = transformer.transform(getExpanded(message), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getProtocol()).isNotEmpty();
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
         assertThat(result.getCallbackAddress()).isEqualTo(CALLBACK);
 
         var contractOffer = result.getContractOffer();

@@ -49,4 +49,20 @@ public interface KeyParser {
      * @return Either a {@link java.security.PrivateKey}, a {@link java.security.PublicKey} or a failure.
      */
     Result<Key> parse(String encoded);
+
+    /**
+     * Parses the encoded key as public key. If the encoded string is invalid, or the parser can't handle the input,
+     * it must return a {@link Result#failure(String)}, it must never throw an exception.
+     * <p>
+     * If the given key material contains public and private key data, the parser attempts to remove the private key data,
+     * returning only the public part of the key as {@link java.security.PublicKey}.
+     * If the given key material does not contain private key data, just public key data, returns a {@link java.security.PublicKey}. In all
+     * other cases, a {@link Result#failure(String)} is returned, for example, when a private key cannot be converted into a public key.
+     *
+     * @param encoded serialized/encoded key material.
+     * @return Either a {@link java.security.PublicKey} or a failure.
+     */
+    default Result<Key> parsePublic(String encoded) {
+        return parse(encoded);
+    }
 }

@@ -211,29 +211,6 @@ public class SqlContractNegotiationStore extends AbstractSqlStore implements Con
         });
     }
 
-    @Override
-    public StoreResult<ContractNegotiation> findByCorrelationIdAndLease(String correlationId) {
-        return transactionContext.execute(() -> {
-            var querySpec = correlationIdQuerySpec(correlationId);
-            try (
-                    var connection = getConnection();
-                    var stream = queryNegotiations(querySpec, connection);
-            ) {
-                var entity = stream.findFirst().orElse(null);
-                if (entity == null) {
-                    return StoreResult.notFound(format("ContractNegotiation with correlationId %s not found", correlationId));
-                }
-
-                leaseContext.withConnection(connection).acquireLease(entity.getId());
-                return StoreResult.success(entity);
-            } catch (IllegalStateException e) {
-                return StoreResult.alreadyLeased(format("ContractNegotiation with correlationId %s is already leased", correlationId));
-            } catch (SQLException e) {
-                throw new EdcPersistenceException(e);
-            }
-        });
-    }
-
     private QuerySpec correlationIdQuerySpec(String correlationId) {
         return QuerySpec.Builder.newInstance().filter(List.of(new Criterion("correlationId", "=", correlationId))).build();
     }

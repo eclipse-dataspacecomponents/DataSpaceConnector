@@ -114,7 +114,7 @@ class JsonObjectFromContractAgreementMessageTransformerTest {
         verify(context, never()).reportProblem(anyString());
     }
 
-    @Deprecated
+    @Deprecated(since = "0.5.1")
     @Test
     void shouldSetConsumerIdAndProviderIdForBackwardCompatibility() {
         var message = ContractAgreementMessage.Builder.newInstance()

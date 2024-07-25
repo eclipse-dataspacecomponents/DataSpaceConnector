@@ -22,8 +22,8 @@ import org.eclipse.edc.transform.spi.TransformerContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
-
+import static java.util.Optional.ofNullable;
+import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_ADDITIONAL_SCOPES;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_COUNTER_PARTY_ADDRESS;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_COUNTER_PARTY_ID;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequest.CATALOG_REQUEST_PROTOCOL;
@@ -40,21 +40,25 @@ public class JsonObjectToCatalogRequestTransformer extends AbstractJsonLdTransfo
         var counterPartyAddress = transformString(object.get(CATALOG_REQUEST_COUNTER_PARTY_ADDRESS), context);
 
         // For backward compatibility if the ID is not sent, fallback to the counterPartyAddress
-        var counterPartyId = Optional.ofNullable(object.get(CATALOG_REQUEST_COUNTER_PARTY_ID))
+        var counterPartyId = ofNullable(object.get(CATALOG_REQUEST_COUNTER_PARTY_ID))
                 .map(it -> transformString(it, context))
                 .orElse(counterPartyAddress);
 
-        var querySpec = Optional.of(object)
-                .map(it -> it.get(CATALOG_REQUEST_QUERY_SPEC))
+        var querySpec = ofNullable(object.get(CATALOG_REQUEST_QUERY_SPEC))
                 .map(it -> transformObject(it, QuerySpec.class, context))
                 .orElse(null);
 
-        return CatalogRequest.Builder.newInstance()
+        var builder = CatalogRequest.Builder.newInstance()
                 .protocol(transformString(object.get(CATALOG_REQUEST_PROTOCOL), context))
                 .counterPartyAddress(counterPartyAddress)
                 .counterPartyId(counterPartyId)
-                .querySpec(querySpec)
-                .build();
+                .querySpec(querySpec);
+
+
+        ofNullable(object.getJsonArray(CATALOG_REQUEST_ADDITIONAL_SCOPES))
+                .ifPresent(ja -> builder.additionalScopes(ja.stream().map(this::nodeValue).toList()));
+
+        return builder.build();
     }
 
 }

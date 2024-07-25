@@ -27,9 +27,10 @@ public interface CatalogService {
      * @param counterPartyAddress the url of the provider.
      * @param protocol            the protocol id string.
      * @param querySpec           the {@link QuerySpec} object.
+     * @param additionalScopes    optional list of additional scope values that are intended for use with the IAM subsystem
      * @return the provider's catalog
      */
-    CompletableFuture<StatusResult<byte[]>> requestCatalog(String counterPartyId, String counterPartyAddress, String protocol, QuerySpec querySpec);
+    CompletableFuture<StatusResult<byte[]>> requestCatalog(String counterPartyId, String counterPartyAddress, String protocol, QuerySpec querySpec, String... additionalScopes);
 
     /**
      * Return the dataset

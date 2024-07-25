@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_PROPERTY_DATA_ADDRESS;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspTransferProcessPropertyAndTypeNames.DSPACE_TYPE_TRANSFER_START_MESSAGE;
@@ -59,23 +58,6 @@ class JsonObjectToTransferStartMessageTransformerTest {
         assertThat(result).isNotNull();
         assertThat(result.getConsumerPid()).isEqualTo("consumerPid");
         assertThat(result.getProviderPid()).isEqualTo("providerPid");
-
-        verify(context, never()).reportProblem(anyString());
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void transform_processId() {
-        var json = Json.createObjectBuilder()
-                .add(TYPE, DSPACE_TYPE_TRANSFER_START_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processPid")
-                .build();
-
-        var result = transformer.transform(getExpanded(json), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getConsumerPid()).isEqualTo("processPid");
-        assertThat(result.getProviderPid()).isEqualTo("processPid");
 
         verify(context, never()).reportProblem(anyString());
     }

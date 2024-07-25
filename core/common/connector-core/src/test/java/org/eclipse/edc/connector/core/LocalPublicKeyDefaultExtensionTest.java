@@ -58,7 +58,7 @@ class LocalPublicKeyDefaultExtensionTest {
                 "key1.id", "key1",
                 "key1.value", "value");
 
-        when(keyParserRegistry.parse("value")).thenReturn(Result.success(mock(PublicKey.class)));
+        when(keyParserRegistry.parsePublic("value")).thenReturn(Result.success(mock(PublicKey.class)));
         when(context.getConfig(EDC_PUBLIC_KEYS_PREFIX)).thenReturn(ConfigFactory.fromMap(keys));
         var localPublicKeyService = extension.localPublicKeyService();
         extension.initialize(context);
@@ -75,7 +75,7 @@ class LocalPublicKeyDefaultExtensionTest {
                 "key1.id", "key1",
                 "key1.path", path.getPath());
 
-        when(keyParserRegistry.parse(value)).thenReturn(Result.success(mock(PublicKey.class)));
+        when(keyParserRegistry.parsePublic(value)).thenReturn(Result.success(mock(PublicKey.class)));
         when(context.getConfig(EDC_PUBLIC_KEYS_PREFIX)).thenReturn(ConfigFactory.fromMap(keys));
         var localPublicKeyService = extension.localPublicKeyService();
         extension.initialize(context);

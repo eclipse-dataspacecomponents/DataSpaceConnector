@@ -78,6 +78,7 @@ public interface PropertyAndTypeNames {
     String ODRL_OR_CONSTRAINT_ATTRIBUTE = ODRL_SCHEMA + "or";
     String ODRL_XONE_CONSTRAINT_ATTRIBUTE = ODRL_SCHEMA + "xone";
     String ODRL_USE_ACTION_ATTRIBUTE = ODRL_SCHEMA + "use";
+    String ODRL_PROFILE_ATTRIBUTE = ODRL_SCHEMA + "profile";
 
     String DSPACE_PROPERTY_PARTICIPANT_ID = DSPACE_SCHEMA + "participantId";
 }

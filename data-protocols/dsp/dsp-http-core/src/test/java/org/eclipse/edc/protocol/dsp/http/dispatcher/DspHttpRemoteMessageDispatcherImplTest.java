@@ -18,6 +18,7 @@ import okhttp3.MediaType;
 import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
+import org.eclipse.edc.connector.controlplane.catalog.spi.CatalogRequestMessage;
 import org.eclipse.edc.http.spi.EdcHttpClient;
 import org.eclipse.edc.policy.engine.spi.PolicyContext;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
@@ -269,6 +270,50 @@ class DspHttpRemoteMessageDispatcherImplTest {
 
         assertThat(result).succeedsWithin(timeout);
         verifyNoInteractions(policyEngine);
+    }
+
+    @Test
+    void dispatch_whenCatalogRequestMessage_shouldExtractScopes() {
+        var authToken = "token";
+        Map<String, Object> additional = Map.of("foo", "bar");
+        var policy = Policy.Builder.newInstance().build();
+        DspHttpRequestFactory<CatalogRequestMessage> rqFactory = mock();
+        when(audienceResolver.resolve(any())).thenReturn(Result.success(AUDIENCE_VALUE));
+        when(tokenDecorator.decorate(any())).thenAnswer(a -> a.getArgument(0, TokenParameters.Builder.class).claims(additional));
+        when(rqFactory.createRequest(any())).thenReturn(new Request.Builder().url("http://url").build());
+        when(httpClient.executeAsync(any(), isA(List.class))).thenReturn(completedFuture(dummyResponse(200)));
+        when(identityService.obtainClientCredentials(any()))
+                .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(authToken).build()));
+
+        dispatcher.registerPolicyScope(CatalogRequestMessage.class, "scope.test", (m) -> policy);
+
+        when(policyEngine.evaluate(eq("scope.test"), eq(policy), any())).thenAnswer(a -> {
+            PolicyContext context = a.getArgument(2);
+            var builder = context.getContextData(RequestScope.Builder.class);
+            builder.scope("policy-test-scope");
+            return Result.success();
+        });
+
+        dispatcher.registerMessage(CatalogRequestMessage.class, rqFactory, mock());
+
+        var message = CatalogRequestMessage.Builder.newInstance().additionalScopes("scope1", "scope2").build();
+        var result = dispatcher.dispatch(String.class, message);
+
+        assertThat(result).succeedsWithin(timeout);
+
+        var captor = ArgumentCaptor.forClass(TokenParameters.class);
+        verify(identityService).obtainClientCredentials(captor.capture());
+        verify(httpClient).executeAsync(argThat(r -> authToken.equals(r.headers().get("Authorization"))), isA(List.class));
+        verify(rqFactory).createRequest(message);
+        verify(policyEngine).evaluate(any(), any(), argThat(ctx -> {
+            var requestContext = ctx.getContextData(RequestContext.class);
+            return requestContext.getMessage().getClass().equals(CatalogRequestMessage.class) && requestContext.getDirection().equals(RequestContext.Direction.Egress);
+        }));
+        assertThat(captor.getValue()).satisfies(tr -> {
+            assertThat(tr.getStringClaim(SCOPE_CLAIM)).isEqualTo("policy-test-scope scope1 scope2");
+            assertThat(tr.getStringClaim(AUDIENCE_CLAIM)).isEqualTo(AUDIENCE_VALUE);
+            assertThat(tr.getClaims()).containsAllEntriesOf(additional);
+        });
     }
 
     @Test

@@ -31,7 +31,6 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTyp
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_TYPE_CONTRACT_NEGOTIATION_EVENT_MESSAGE;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspNegotiationPropertyAndTypeNames.DSPACE_VALUE_NEGOTIATION_EVENT_TYPE_ACCEPTED;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_CONSUMER_PID;
-import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROCESS_ID;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspPropertyAndTypeNames.DSPACE_PROPERTY_PROVIDER_PID;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -71,28 +70,6 @@ class JsonObjectToContractNegotiationEventMessageTransformerTest {
         assertThat(result.getProtocol()).isNotEmpty();
         assertThat(result.getConsumerPid()).isEqualTo("consumerPid");
         assertThat(result.getProviderPid()).isEqualTo("providerPid");
-        assertThat(result.getType()).isEqualTo(ContractNegotiationEventMessage.Type.ACCEPTED);
-
-        verify(context, never()).reportProblem(anyString());
-    }
-
-    @Deprecated(since = "0.4.1")
-    @Test
-    void transform_processId() {
-        var message = jsonFactory.createObjectBuilder()
-                .add(JsonLdKeywords.ID, "id1")
-                .add(JsonLdKeywords.TYPE, DSPACE_TYPE_CONTRACT_NEGOTIATION_EVENT_MESSAGE)
-                .add(DSPACE_PROPERTY_PROCESS_ID, "processId")
-                .add(DSPACE_PROPERTY_EVENT_TYPE, DSPACE_VALUE_NEGOTIATION_EVENT_TYPE_ACCEPTED)
-                .build();
-
-        var result = transformer.transform(getExpanded(message), context);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getClass()).isEqualTo(ContractNegotiationEventMessage.class);
-        assertThat(result.getProtocol()).isNotEmpty();
-        assertThat(result.getProviderPid()).isEqualTo("processId");
-        assertThat(result.getConsumerPid()).isEqualTo("processId");
         assertThat(result.getType()).isEqualTo(ContractNegotiationEventMessage.Type.ACCEPTED);
 
         verify(context, never()).reportProblem(anyString());

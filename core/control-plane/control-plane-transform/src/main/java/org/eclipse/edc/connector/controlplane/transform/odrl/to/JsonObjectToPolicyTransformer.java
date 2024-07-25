@@ -16,6 +16,7 @@ package org.eclipse.edc.connector.controlplane.transform.odrl.to;
 
 import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import org.eclipse.edc.jsonld.spi.transformer.AbstractJsonLdTransformer;
 import org.eclipse.edc.policy.model.Duty;
 import org.eclipse.edc.policy.model.Permission;
@@ -27,8 +28,11 @@ import org.eclipse.edc.transform.spi.TransformerContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
+import static java.util.stream.Collectors.toList;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_ASSIGNEE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_ASSIGNER_ATTRIBUTE;
@@ -37,6 +41,7 @@ import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PERMISSION_AT
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_AGREEMENT;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_OFFER;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_POLICY_TYPE_SET;
+import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROFILE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_PROHIBITION_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_TARGET_ATTRIBUTE;
 
@@ -91,10 +96,17 @@ public class JsonObjectToPolicyTransformer extends AbstractJsonLdTransformer<Jso
             case ODRL_TARGET_ATTRIBUTE -> v -> builder.target(transformString(v, context));
             case ODRL_ASSIGNER_ATTRIBUTE -> v -> builder.assigner(participantIdMapper.fromIri(transformString(v, context)));
             case ODRL_ASSIGNEE_ATTRIBUTE -> v -> builder.assignee(participantIdMapper.fromIri(transformString(v, context)));
+            case ODRL_PROFILE_ATTRIBUTE -> v -> builder.profiles(transformProfile(v));
             default -> v -> builder.extensibleProperty(key, transformGenericProperty(v, context));
         });
 
         return builderResult(builder::build, context);
     }
 
+    private List<String> transformProfile(JsonValue value) {
+        return value.asJsonArray().stream()
+                .map(this::nodeId)
+                .filter(Objects::nonNull)
+                .collect(toList());
+    }
 }
