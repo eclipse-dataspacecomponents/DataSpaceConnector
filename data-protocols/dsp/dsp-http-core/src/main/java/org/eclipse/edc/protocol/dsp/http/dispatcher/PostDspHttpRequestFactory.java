@@ -18,12 +18,10 @@ import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import org.eclipse.edc.connector.controlplane.services.spi.protocol.ProtocolVersion;
-import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspHttpRequestFactory;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.RequestPathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.serialization.JsonLdRemoteMessageSerializer;
-import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 
 /**
@@ -36,12 +34,11 @@ public class PostDspHttpRequestFactory<M extends RemoteMessage> implements DspHt
     public static final String APPLICATION_JSON = "application/json";
     private final RequestPathProvider<M> pathProvider;
     private final JsonLdRemoteMessageSerializer serializer;
-    private final DspProtocolParser protocolParser;
+    private final DspRequestBasePathProvider dspBasePathProvider;
 
-
-    public PostDspHttpRequestFactory(JsonLdRemoteMessageSerializer serializer, DspProtocolParser protocolParser, RequestPathProvider<M> pathProvider) {
+    public PostDspHttpRequestFactory(JsonLdRemoteMessageSerializer serializer, DspRequestBasePathProvider dspBasePathProvider, RequestPathProvider<M> pathProvider) {
         this.serializer = serializer;
-        this.protocolParser = protocolParser;
+        this.dspBasePathProvider = dspBasePathProvider;
         this.pathProvider = pathProvider;
     }
 
@@ -50,12 +47,7 @@ public class PostDspHttpRequestFactory<M extends RemoteMessage> implements DspHt
         var body = serializer.serialize(message);
         var requestBody = RequestBody.create(body, MediaType.get(APPLICATION_JSON));
 
-        var protocolPath = protocolParser.parse(message.getProtocol())
-                .map(ProtocolVersion::path)
-                .map(this::removeTrailingSlash)
-                .orElseThrow(failure -> new EdcException(failure.getFailureDetail()));
-
-        var url = HttpUrl.get(message.getCounterPartyAddress() + protocolPath + pathProvider.providePath(message));
+        var url = HttpUrl.get(dspBasePathProvider.provideBasePath(message) + pathProvider.providePath(message));
 
         return new Request.Builder()
                 .url(url)

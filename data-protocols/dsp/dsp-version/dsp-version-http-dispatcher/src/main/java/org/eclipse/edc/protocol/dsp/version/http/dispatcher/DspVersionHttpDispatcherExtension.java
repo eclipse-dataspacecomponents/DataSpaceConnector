@@ -17,8 +17,8 @@ package org.eclipse.edc.protocol.dsp.version.http.dispatcher;
 import org.eclipse.edc.connector.controlplane.protocolversion.spi.ProtocolVersionRequestMessage;
 import org.eclipse.edc.protocol.dsp.http.dispatcher.GetDspHttpRequestFactory;
 import org.eclipse.edc.protocol.dsp.http.serialization.ByteArrayBodyExtractor;
-import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspHttpRemoteMessageDispatcher;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.system.ServiceExtension;
@@ -39,7 +39,7 @@ public class DspVersionHttpDispatcherExtension implements ServiceExtension {
     private DspHttpRemoteMessageDispatcher messageDispatcher;
 
     @Inject
-    private DspProtocolParser dspProtocolParser;
+    private DspRequestBasePathProvider dspRequestBasePathProvider;
 
     @Override
     public String name() {
@@ -52,7 +52,7 @@ public class DspVersionHttpDispatcherExtension implements ServiceExtension {
 
         messageDispatcher.registerMessage(
                 ProtocolVersionRequestMessage.class,
-                new GetDspHttpRequestFactory<>(dspProtocolParser, m -> PATH),
+                new GetDspHttpRequestFactory<>(dspRequestBasePathProvider, m -> PATH),
                 byteArrayBodyExtractor
         );
     }

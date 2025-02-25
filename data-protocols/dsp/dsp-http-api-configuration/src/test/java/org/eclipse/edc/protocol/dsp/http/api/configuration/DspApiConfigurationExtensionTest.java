@@ -49,6 +49,7 @@ import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DA
 import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DATASPACE_PROTOCOL_HTTP_V_2024_1;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_SCOPE_V_08;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_SCOPE_V_2024_1;
+import static org.eclipse.edc.protocol.dsp.spi.version.DspVersions.V_2024_1_PATH;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_PREFIX;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,7 +94,7 @@ class DspApiConfigurationExtensionTest {
 
         var url = "http://hostname:%s%s".formatted(DEFAULT_PROTOCOL_PORT, DEFAULT_PROTOCOL_PATH);
         verify(protocolWebhookRegistry).registerWebhook(eq(DATASPACE_PROTOCOL_HTTP), argThat(webhook -> webhook.url().equals(url)));
-        verify(protocolWebhookRegistry).registerWebhook(eq(DATASPACE_PROTOCOL_HTTP_V_2024_1), argThat(webhook -> webhook.url().equals(url)));
+        verify(protocolWebhookRegistry).registerWebhook(eq(DATASPACE_PROTOCOL_HTTP_V_2024_1), argThat(webhook -> webhook.url().equals(url + V_2024_1_PATH)));
     }
 
     @Test
@@ -102,7 +103,8 @@ class DspApiConfigurationExtensionTest {
         when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(
                 "web.http.protocol.port", String.valueOf(1234),
                 "web.http.protocol.path", "/path",
-                "edc.dsp.callback.address", webhookAddress))
+                "edc.dsp.callback.address", webhookAddress,
+                "edc.dsp.wellKnownPath.enabled", "true"))
         );
         var extension = factory.constructInstance(DspApiConfigurationExtension.class);
 
@@ -114,6 +116,7 @@ class DspApiConfigurationExtensionTest {
         verify(protocolWebhookRegistry).registerWebhook(eq(DATASPACE_PROTOCOL_HTTP_V_2024_1), argThat(webhook -> webhook.url().equals(webhookAddress)));
 
     }
+
 
     @Test
     void initialize_shouldRegisterWebServiceProviders(DspApiConfigurationExtension extension, ServiceExtensionContext context) {

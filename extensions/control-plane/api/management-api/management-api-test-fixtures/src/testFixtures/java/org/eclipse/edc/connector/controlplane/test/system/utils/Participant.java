@@ -62,8 +62,9 @@ public class Participant {
 
     protected String id;
     protected String name;
-    protected LazySupplier<URI> controlPlaneManagement = new LazySupplier<>(() ->  URI.create("http://localhost:" + getFreePort() + "/management"));
-    protected LazySupplier<URI> controlPlaneProtocol = new LazySupplier<>(() ->  URI.create("http://localhost:" + getFreePort() + "/protocol"));
+    protected LazySupplier<URI> controlPlaneManagement = new LazySupplier<>(() -> URI.create("http://localhost:" + getFreePort() + "/management"));
+    protected LazySupplier<URI> controlPlaneProtocol = new LazySupplier<>(() -> URI.create("http://localhost:" + getFreePort() + "/protocol"));
+    protected String protocolVersionPath = "";
     protected UnaryOperator<RequestSpecification> enrichManagementRequest = r -> r;
     @Deprecated(since = "0.11.0")
     protected Endpoint managementEndpoint;
@@ -90,16 +91,39 @@ public class Participant {
     }
 
     public void setProtocol(String protocol) {
+        setProtocol(protocol, "");
+    }
+
+    public void setProtocol(String protocol, String path) {
         this.protocol = protocol;
+        this.protocolVersionPath = path;
+    }
+
+    public String getProtocolVersionPath() {
+        return protocolVersionPath;
     }
 
     @Deprecated(since = "0.11.0")
+    public Endpoint getProtocolEndpoint() {
+        return protocolEndpoint;
+    }
+
+
     public Endpoint getManagementEndpoint() {
         return managementEndpoint;
     }
 
     public String getId() {
         return id;
+    }
+
+    /**
+     * Get the protocol URL of the participant which is the protocol base path + protocol version path (empty by default).
+     *
+     * @return protocol URL
+     */
+    public String getProtocolUrl() {
+        return controlPlaneProtocol.get() + protocolVersionPath;
     }
 
     /**
@@ -212,7 +236,7 @@ public class Participant {
                 .add(CONTEXT, createObjectBuilder().add(VOCAB, EDC_NAMESPACE))
                 .add(TYPE, "CatalogRequest")
                 .add("counterPartyId", provider.id)
-                .add("counterPartyAddress", provider.controlPlaneProtocol.get().toString())
+                .add("counterPartyAddress", provider.getProtocolUrl())
                 .add("protocol", protocol);
 
         if (querySpec != null) {
@@ -256,7 +280,7 @@ public class Participant {
                 .add(TYPE, "DatasetRequest")
                 .add(ID, assetId)
                 .add("counterPartyId", provider.id)
-                .add("counterPartyAddress", provider.controlPlaneProtocol.get().toString())
+                .add("counterPartyAddress", provider.getProtocolUrl())
                 .add("protocol", protocol)
                 .build();
 
@@ -305,7 +329,7 @@ public class Participant {
         var requestBody = createObjectBuilder()
                 .add(CONTEXT, createObjectBuilder().add(VOCAB, EDC_NAMESPACE))
                 .add(TYPE, "ContractRequest")
-                .add("counterPartyAddress", provider.controlPlaneProtocol.get().toString())
+                .add("counterPartyAddress", provider.getProtocolUrl())
                 .add("protocol", protocol)
                 .add("policy", jsonLd.compact(policy).getContent())
                 .build();
@@ -372,7 +396,7 @@ public class Participant {
                 .add("protocol", protocol)
                 .add("contractId", contractAgreementId)
                 .add("connectorId", provider.id)
-                .add("counterPartyAddress", provider.controlPlaneProtocol.get().toString());
+                .add("counterPartyAddress", provider.getProtocolUrl());
 
         if (privateProperties != null) {
             requestBodyBuilder.add("privateProperties", privateProperties);
@@ -523,6 +547,11 @@ public class Participant {
         );
     }
 
+    public RequestSpecification baseManagementRequest() {
+        var request = given().baseUri(controlPlaneManagement.get().toString());
+        return enrichManagementRequest.apply(request);
+    }
+
     protected String getContractNegotiationField(String negotiationId, String fieldName) {
         return baseManagementRequest()
                 .contentType(JSON)
@@ -558,11 +587,6 @@ public class Participant {
         return contractAgreementId;
     }
 
-    public RequestSpecification baseManagementRequest() {
-        var request = given().baseUri(controlPlaneManagement.get().toString());
-        return enrichManagementRequest.apply(request);
-    }
-
     /**
      * Represent an endpoint exposed by a {@link Participant}.
      *
@@ -591,6 +615,9 @@ public class Participant {
             return url;
         }
 
+        public Map<String, String> getHeaders() {
+            return headers;
+        }
     }
 
     public static class Builder<P extends Participant, B extends Participant.Builder<P, B>> {

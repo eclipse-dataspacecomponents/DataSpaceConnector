@@ -69,6 +69,7 @@ import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_SCOPE_V_08;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_SCOPE_V_2024_1;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_TRANSFORMER_CONTEXT_V_08;
 import static org.eclipse.edc.protocol.dsp.spi.type.DspConstants.DSP_TRANSFORMER_CONTEXT_V_2024_1;
+import static org.eclipse.edc.protocol.dsp.spi.version.DspVersions.V_2024_1_PATH;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_PREFIX;
 import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
@@ -83,6 +84,11 @@ public class DspApiConfigurationExtension implements ServiceExtension {
 
     static final String DEFAULT_PROTOCOL_PATH = "/api/protocol";
     static final int DEFAULT_PROTOCOL_PORT = 8282;
+
+    private static final boolean DEFAULT_WELL_KNOWN_PATH = false;
+
+    @Setting(description = "If set enable the well known path resolution scheme will be used", key = "edc.dsp.wellKnownPath.enabled", required = false, defaultValue = DEFAULT_WELL_KNOWN_PATH + "")
+    private boolean wellKnownPathEnabled;
 
     @Setting(description = "Configures endpoint for reaching the Protocol API in the form \"<hostname:protocol.port/protocol.path>\"", key = "edc.dsp.callback.address", required = false)
     private String callbackAddress;
@@ -119,8 +125,11 @@ public class DspApiConfigurationExtension implements ServiceExtension {
 
         var dspWebhookAddress = ofNullable(callbackAddress).orElseGet(() -> format("http://%s:%s%s", hostname.get(), portMapping.port(), portMapping.path()));
 
+
+        var v2024Path = dspWebhookAddress + (wellKnownPathEnabled ? "" : V_2024_1_PATH);
+
         protocolWebhookRegistry.registerWebhook(DATASPACE_PROTOCOL_HTTP, () -> dspWebhookAddress);
-        protocolWebhookRegistry.registerWebhook(DATASPACE_PROTOCOL_HTTP_V_2024_1, () -> dspWebhookAddress);
+        protocolWebhookRegistry.registerWebhook(DATASPACE_PROTOCOL_HTTP_V_2024_1, () -> v2024Path);
 
         // registers ns for DSP scope
         registerNamespaces(DSP_SCOPE_V_08, DSP_NAMESPACE_V_08);
@@ -134,6 +143,7 @@ public class DspApiConfigurationExtension implements ServiceExtension {
         registerTransformers(DSP_TRANSFORMER_CONTEXT_V_08, DSP_NAMESPACE_V_08);
         registerTransformers(DSP_TRANSFORMER_CONTEXT_V_2024_1, DSP_NAMESPACE_V_2024_1);
     }
+
 
     @Override
     public void prepare() {

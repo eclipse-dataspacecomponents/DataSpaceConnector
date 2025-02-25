@@ -15,10 +15,8 @@
 package org.eclipse.edc.protocol.dsp.http.dispatcher;
 
 import org.eclipse.edc.protocol.dsp.http.TestMessage;
-import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.RequestPathProvider;
-import org.eclipse.edc.protocol.dsp.spi.version.DspVersions;
-import org.eclipse.edc.spi.result.Result;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,13 +27,13 @@ import static org.mockito.Mockito.when;
 class GetDspHttpRequestFactoryTest {
 
     private final RequestPathProvider<TestMessage> pathProvider = mock();
-    private final DspProtocolParser dspProtocolParser = mock();
-    private final GetDspHttpRequestFactory<TestMessage> factory = new GetDspHttpRequestFactory<>(dspProtocolParser, pathProvider);
+    private final DspRequestBasePathProvider dspRequestBasePathProvider = mock();
+    private final GetDspHttpRequestFactory<TestMessage> factory = new GetDspHttpRequestFactory<>(dspRequestBasePathProvider, pathProvider);
 
     @Test
     void shouldCreateProperHttpRequest() {
         when(pathProvider.providePath(any())).thenReturn("/message/request/path");
-        when(dspProtocolParser.parse("protocol")).thenReturn(Result.success(DspVersions.V_08));
+        when(dspRequestBasePathProvider.provideBasePath(any())).thenReturn("http://counter-party");
 
         var message = new TestMessage("protocol", "http://counter-party", "counterPartyId");
         var request = factory.createRequest(message);
@@ -43,5 +41,5 @@ class GetDspHttpRequestFactoryTest {
         assertThat(request.url().url().toString()).isEqualTo("http://counter-party/message/request/path");
         assertThat(request.method()).isEqualTo("GET");
     }
-    
+
 }

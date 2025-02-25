@@ -38,11 +38,13 @@ import org.eclipse.edc.policy.context.request.spi.RequestTransferProcessPolicyCo
 import org.eclipse.edc.policy.context.request.spi.RequestVersionPolicyContext;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.protocol.dsp.http.dispatcher.DspHttpRemoteMessageDispatcherImpl;
+import org.eclipse.edc.protocol.dsp.http.dispatcher.DspRequestBasePathProviderImpl;
 import org.eclipse.edc.protocol.dsp.http.message.DspRequestHandlerImpl;
 import org.eclipse.edc.protocol.dsp.http.protocol.DspProtocolParserImpl;
 import org.eclipse.edc.protocol.dsp.http.serialization.JsonLdRemoteMessageSerializerImpl;
 import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspHttpRemoteMessageDispatcher;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.message.DspRequestHandler;
 import org.eclipse.edc.protocol.dsp.http.spi.serialization.JsonLdRemoteMessageSerializer;
 import org.eclipse.edc.protocol.dsp.http.transform.DspProtocolTypeTransformerRegistryImpl;
@@ -50,6 +52,7 @@ import org.eclipse.edc.protocol.dsp.spi.transform.DspProtocolTypeTransformerRegi
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
+import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.iam.AudienceResolver;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.message.RemoteMessageDispatcherRegistry;
@@ -80,6 +83,11 @@ import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
 public class DspHttpCoreExtension implements ServiceExtension {
 
     public static final String NAME = "Dataspace Protocol Core Extension";
+
+    private static final boolean DEFAULT_WELL_KNOWN_PATH = false;
+
+    @Setting(description = "If set enable the well known path resolution scheme will be used", key = "edc.dsp.wellKnownPath.enabled", required = false, defaultValue = DEFAULT_WELL_KNOWN_PATH + "")
+    private boolean wellKnownPathEnabled;
 
     @Inject
     private RemoteMessageDispatcherRegistry dispatcherRegistry;
@@ -169,6 +177,10 @@ public class DspHttpCoreExtension implements ServiceExtension {
         return dspProtocolParser;
     }
 
+    @Provider
+    public DspRequestBasePathProvider dspRequestBasePathProvider() {
+        return new DspRequestBasePathProviderImpl(dspProtocolParser(), wellKnownPathEnabled);
+    }
 
     private void registerNegotiationPolicyScopes(DspHttpRemoteMessageDispatcher dispatcher) {
         dispatcher.registerPolicyScope(ContractAgreementMessage.class, ContractRemoteMessage::getPolicy, RequestContractNegotiationPolicyContext::new);

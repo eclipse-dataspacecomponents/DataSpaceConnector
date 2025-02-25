@@ -24,8 +24,8 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.protocol.Contra
 import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.protocol.dsp.http.dispatcher.PostDspHttpRequestFactory;
 import org.eclipse.edc.protocol.dsp.http.serialization.JsonLdResponseBodyDeserializer;
-import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspHttpRemoteMessageDispatcher;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.serialization.JsonLdRemoteMessageSerializer;
 import org.eclipse.edc.protocol.dsp.spi.transform.DspProtocolTypeTransformerRegistry;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
@@ -58,7 +58,7 @@ public class DspNegotiationHttpDispatcherExtension implements ServiceExtension {
     private JsonLd jsonLd;
 
     @Inject
-    private DspProtocolParser dspProtocolParser;
+    private DspRequestBasePathProvider dspRequestBasePathProvider;
 
     @Override
     public String name() {
@@ -72,27 +72,27 @@ public class DspNegotiationHttpDispatcherExtension implements ServiceExtension {
 
         messageDispatcher.registerMessage(
                 ContractAgreementMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.AGREEMENT),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.AGREEMENT),
                 NOOP
         );
         messageDispatcher.registerMessage(
                 ContractAgreementVerificationMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.AGREEMENT + NegotiationApiPaths.VERIFICATION),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.AGREEMENT + NegotiationApiPaths.VERIFICATION),
                 NOOP
         );
         messageDispatcher.registerMessage(
                 ContractNegotiationEventMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.EVENT),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.EVENT),
                 NOOP
         );
         messageDispatcher.registerMessage(
                 ContractNegotiationTerminationMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.TERMINATION),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.TERMINATION),
                 NOOP
         );
         messageDispatcher.registerMessage(
                 ContractRequestMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> {
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> {
                     if (m.getType() == ContractRequestMessage.Type.INITIAL) {
                         return NegotiationApiPaths.BASE_PATH + NegotiationApiPaths.INITIAL_CONTRACT_REQUEST;
                     } else {
@@ -103,7 +103,7 @@ public class DspNegotiationHttpDispatcherExtension implements ServiceExtension {
         );
         messageDispatcher.registerMessage(
                 ContractOfferMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.CONTRACT_OFFER),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> NegotiationApiPaths.BASE_PATH + m.getProcessId() + NegotiationApiPaths.CONTRACT_OFFER),
                 contractNegotiationAckDeserializer
         );
     }

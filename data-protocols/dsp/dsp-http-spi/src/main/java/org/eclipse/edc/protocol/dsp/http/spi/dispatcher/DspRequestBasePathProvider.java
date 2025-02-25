@@ -14,22 +14,19 @@
 
 package org.eclipse.edc.protocol.dsp.http.spi.dispatcher;
 
-import okhttp3.Request;
+
 import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 
 /**
- * Creates an HTTP request for the DSP HTTP Bindings given the message instance
- *
- * @param <M> the message type.
+ * Provide the http request base path given the outgoing message.
  */
 @FunctionalInterface
-public interface DspHttpRequestFactory<M extends RemoteMessage> {
-
+public interface DspRequestBasePathProvider {
     /**
-     * Create the request given the message and a {@link RequestPathProvider}
+     * Return the path
      *
      * @param message the message.
-     * @return the request.
+     * @return the path.
      */
-    Request createRequest(M message);
+    String provideBasePath(RemoteMessage message);
 }

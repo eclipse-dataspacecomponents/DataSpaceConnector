@@ -19,8 +19,8 @@ import org.eclipse.edc.connector.controlplane.catalog.spi.DatasetRequestMessage;
 import org.eclipse.edc.protocol.dsp.http.dispatcher.GetDspHttpRequestFactory;
 import org.eclipse.edc.protocol.dsp.http.dispatcher.PostDspHttpRequestFactory;
 import org.eclipse.edc.protocol.dsp.http.serialization.ByteArrayBodyExtractor;
-import org.eclipse.edc.protocol.dsp.http.spi.DspProtocolParser;
 import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspHttpRemoteMessageDispatcher;
+import org.eclipse.edc.protocol.dsp.http.spi.dispatcher.DspRequestBasePathProvider;
 import org.eclipse.edc.protocol.dsp.http.spi.serialization.JsonLdRemoteMessageSerializer;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
@@ -45,7 +45,7 @@ public class DspCatalogHttpDispatcherExtension implements ServiceExtension {
     @Inject
     private JsonLdRemoteMessageSerializer remoteMessageSerializer;
     @Inject
-    private DspProtocolParser dspProtocolParser;
+    private DspRequestBasePathProvider dspRequestBasePathProvider;
 
     @Override
     public String name() {
@@ -58,12 +58,12 @@ public class DspCatalogHttpDispatcherExtension implements ServiceExtension {
 
         messageDispatcher.registerMessage(
                 CatalogRequestMessage.class,
-                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspProtocolParser, m -> BASE_PATH + CATALOG_REQUEST),
+                new PostDspHttpRequestFactory<>(remoteMessageSerializer, dspRequestBasePathProvider, m -> BASE_PATH + CATALOG_REQUEST),
                 byteArrayBodyExtractor
         );
         messageDispatcher.registerMessage(
                 DatasetRequestMessage.class,
-                new GetDspHttpRequestFactory<>(dspProtocolParser, m -> BASE_PATH + DATASET_REQUEST + "/" + m.getDatasetId()),
+                new GetDspHttpRequestFactory<>(dspRequestBasePathProvider, m -> BASE_PATH + DATASET_REQUEST + "/" + m.getDatasetId()),
                 byteArrayBodyExtractor
         );
     }
